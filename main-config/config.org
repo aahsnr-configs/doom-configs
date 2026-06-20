@@ -15,7 +15,7 @@
   :custom
   (doom-themes-enable-bold t)
   (doom-themes-enable-italic t)
-  (doom-themes-treemacs-theme "doom-tokyo-night")
+  (doom-themes-treemacs-theme "doom-colors")
   :config
   (load-theme 'doom-tokyo-night t)
   (doom-themes-visual-bell-config)

@@ -1,12 +1,12 @@
 #+title: Config
 
-* Personal Information
+* TODO Personal Information
 #+begin_src emacs-lisp
 (setq user-full-name "Ahsanur Rahman"
       user-mail-address "ahsanur041@proton.me")
 #+end_src
 
-* Sensible Defaults
+* TODO Sensible Defaults
 #+begin_src emacs-lisp
 (setq inhibit-compacting-font-caches t)
 (global-so-long-mode 1)
@@ -48,7 +48,7 @@
 (setq-default bidi-display-reordering nil)
 #+end_src
 
-* Evil
+* TODO Evil
 #+begin_src emacs-lisp
 (after! evil
   (setq evil-want-fine-undo t
@@ -64,7 +64,7 @@
       :nv "k" #'evil-previous-visual-line)
 #+end_src
 
-* Scrolling
+* TODO Scrolling
 #+begin_src emacs-lisp
 ;; Scroll one line at a time (less "jumpy" than defaults)
 (setq hscroll-step 1
@@ -80,7 +80,7 @@
 (pixel-scroll-precision-mode 1)
 #+end_src
 
-* UI and Theming
+* TODO UI and Theming
 ** Theming
 #+begin_src emacs-lisp
 (use-package! doom-themes
@@ -137,15 +137,15 @@
   #'display-line-numbers-mode)
 #+end_src
 
-* Editor Behaviour
-* Persist Text Scale
+* TODO Editor Behaviour
+* TODO Persist Text Scale
 #+begin_src emacs-lisp
 (after! persist-text-scale
   (setq persist-text-scale-autosave-interval (* 7 60))
   (persist-text-scale-mode))
 #+end_src
 
-* Parenthesis
+* TODO Parenthesis
 #+begin_src emacs-lisp
 (after! smartparens
   ;; Enable show-smartparens-mode globally
@@ -158,7 +158,7 @@
                 (show-smartparens-mode -1)))))
 #+end_src
 
-* Indent Bars
+* TODO Indent Bars
 #+begin_src emacs-lisp
 (after! indent-bars
   (setq indent-bars-color '(highlight :face-bg t :blend 0.165)
@@ -203,7 +203,7 @@
   (setq dtrt-indent-mode-exclude-list '(org-mode)))
 #+end_src
 
-* Rainbow Delimiters
+* TODO Rainbow Delimiters
 #+begin_src emacs-lisp
 (use-package! rainbow-delimiters
   :hook ((LaTeX-mode prog-mode) . rainbow-delimiters-mode))
@@ -220,7 +220,7 @@
   '(rainbow-delimiters-depth-9-face :foreground "#73daca")) ; Teal
 #+end_src
 
-* Rainbow Mode
+* TODO Rainbow Mode
 #+begin_src emacs-lisp
 (use-package! rainbow-mode
   :hook ((prog-mode . rainbow-mode)
@@ -232,7 +232,7 @@
   (setq rainbow-latex-colors t))
 #+end_src
 
-* Move Text
+* TODO Move Text
 #+begin_src emacs-lisp
 (defadvice! ar/indent-after-move-text-a (&rest _)
   :after #'(move-text-up move-text-down)
@@ -247,7 +247,7 @@
       :g "M-<down>" #'move-text-down)
 #+end_src
 
-* Prettify Symbols
+* TODO Prettify Symbols
 ** Core Configuration
 #+begin_src emacs-lisp
 ;;; Prettify Symbols Configuration for Doom Emacs
@@ -586,8 +586,8 @@ Re-enables it after save. Prevents indentation issues."
 ;; (add-hook 'before-save-hook #'ar/prettify-symbols-before-save)
 #+end_src
 
-* Transient
-** Core Configuration
+* TODO Transient
+** TODO Core Configuration
 #+begin_src emacs-lisp
 (setq resize-mini-windows t)
 (set-popup-rule! "^ \\*transient*" :ignore t)
@@ -684,7 +684,7 @@ Re-enables it after save. Prevents indentation issues."
 (map! :g "<f6>" #'+toggles/main)
 #+end_src
 
-** Prettify Symbols
+** TODO Prettify Symbols
 #+begin_src emacs-lisp
 (after! transient
   (transient-define-prefix ar/prettify-symbols-transient ()
@@ -719,8 +719,8 @@ Re-enables it after save. Prevents indentation issues."
        :desc "Prettify symbols menu" "s" #'ar/prettify-symbols-transient))
 #+end_src
 
-* Org
-** Dynamic Directory Creation
+* TODO Org
+** TODO Dynamic Directory Creation
 #+begin_src emacs-lisp
 ;; Set org-directory BEFORE org loads
 (setq org-directory (file-truename (expand-file-name "~/org/")))
@@ -775,7 +775,7 @@ Creates parent directories as needed. Returns the full path."
 (defvar my/org-reviews-directory (my/org-subdir "reviews/"))
 #+end_src
 
-** Org Files Creation
+** TODO Org Files Creation
 #+begin_src emacs-lisp
 (my/ensure-org-file "journal.org"
   "#+title: Journal
@@ -841,7 +841,7 @@ Creates parent directories as needed. Returns the full path."
 ")
 #+end_src
 
-** Font Faces
+** TODO Font Faces
 #+begin_src emacs-lisp
 (defun ar/org-font-setup ()
   "Configure font faces for org-mode headings."
@@ -866,7 +866,7 @@ Creates parent directories as needed. Returns the full path."
 (add-hook! 'org-mode-hook #'ar/org-font-setup)
 #+end_src
 
-** Core Configuration
+** TODO Core Configuration
 #+begin_src emacs-lisp
 (after! org
   ;; Core settings
@@ -979,7 +979,7 @@ Creates parent directories as needed. Returns the full path."
         org-attach-auto-tag "attach"))
 #+end_src
 
-** Org Mode Hooks
+** TODO Org Mode Hooks
 #+begin_src emacs-lisp
 (add-hook! 'org-mode-hook
   #'auto-fill-mode
@@ -999,13 +999,13 @@ Creates parent directories as needed. Returns the full path."
     (setq header-line-format nil)))
 #+end_src
 
-** Org Bullets
+** TODO Org Bullets
 #+begin_src emacs-lisp
 (use-package! org-ibullets
   :hook (org-mode . org-ibullets-mode))
 #+end_src
 
-** Org Structure Templates
+** TODO Org Structure Templates
 #+begin_src emacs-lisp
 (use-package! org-tempo
   :after org
@@ -1019,7 +1019,7 @@ Creates parent directories as needed. Returns the full path."
     (add-to-list 'org-structure-template-alist pair)))
 #+end_src
 
-** Transient Template Menu
+** TODO Transient Template Menu
 #+begin_src emacs-lisp
 (after! (org transient)
   ;; Helper function to expand org templates
@@ -1102,7 +1102,7 @@ Creates parent directories as needed. Returns the full path."
                   (self-insert-command 1)))))
 #+end_src
 
-** Custom Agenda Commands
+** TODO Custom Agenda Commands
 #+begin_src emacs-lisp
 (after! org-agenda
   (setq org-agenda-custom-commands
@@ -1153,7 +1153,7 @@ Creates parent directories as needed. Returns the full path."
             (tags-todo "@phone/GTD-NEXT" ((org-agenda-overriding-header "📞 @Phone"))))))))
 #+end_src
 
-** Org GTD
+** TODO Org GTD
 #+begin_src emacs-lisp
 (use-package! org-edna
   :after org
@@ -1195,7 +1195,7 @@ Creates parent directories as needed. Returns the full path."
         (org-gtd-mode 1)))))
 #+end_src
 
-** Org Roam Configuration
+** TODO Org Roam Configuration
 #+begin_src emacs-lisp
 (after! org-roam
   ;; Ensure directories exist
@@ -1275,7 +1275,7 @@ Creates parent directories as needed. Returns the full path."
         consult-org-roam-buffer-after-buffers t))
 #+end_src
 
-** GTD & Zettelkasten Integration
+** TODO GTD & Zettelkasten Integration
 #+begin_src emacs-lisp
 (defun ar/gtd-to-zettel ()
   "Create a Zettelkasten project note from current GTD project.
@@ -1454,7 +1454,7 @@ Links back to the GTD task for execution tracking."
       (org-end-of-line))))
 #+end_src
 
-** Org Capture
+** TODO Org Capture
 #+begin_src emacs-lisp
 (after! org-capture
   ;; Smart capture dispatcher
@@ -1523,7 +1523,7 @@ Links back to the GTD task for execution tracking."
            :empty-lines 1))))
 #+end_src
 
-** Org Habit
+** TODO Org Habit
 #+begin_src emacs-lisp
 (after! org-habit
   (setq org-habit-graph-column 60
@@ -1539,7 +1539,7 @@ Links back to the GTD task for execution tracking."
           (string-to-char (nerd-icons-codicon "nf-cod-circle_filled")))))
 #+end_src
 
-** Org Download
+** TODO Org Download
 #+begin_src emacs-lisp
 (after! org-download
   (setq org-download-screenshot-method "grim -g \"$(slurp)\" - | swappy -f - -o -"
@@ -1552,7 +1552,7 @@ Links back to the GTD task for execution tracking."
   (advice-add 'org-download-dnd :after #'org-download-display-inline-images))
 #+end_src
 
-** Org Src Buffer Naming
+** TODO Org Src Buffer Naming
 #+begin_src emacs-lisp
 (defun ar/org-src-simplify-buffer-name (base-buffer-name lang)
   "Return static buffer name 'src code' for Org source blocks."
@@ -1562,7 +1562,7 @@ Links back to the GTD task for execution tracking."
             :override #'ar/org-src-simplify-buffer-name)
 #+end_src
 
-** Org Pomodoro
+** TODO Org Pomodoro
 #+begin_src emacs-lisp
 (after! org-pomodoro
   (alert-add-rule :category "org-pomodoro"
@@ -1572,7 +1572,7 @@ Links back to the GTD task for execution tracking."
                                (t alert-default-style))))
 #+end_src
 
-** Org Remark
+** TODO Org Remark
 #+begin_src emacs-lisp
 (use-package! org-remark
   :after org
@@ -1580,7 +1580,7 @@ Links back to the GTD task for execution tracking."
   (org-remark-global-tracking-mode +1))
 #+end_src
 
-* Which Key
+* TODO Which Key
 #+begin_src emacs-lisp
 (after! which-key
   (setq which-key-idle-delay 0.3
@@ -1596,13 +1596,13 @@ Links back to the GTD task for execution tracking."
    ))
 #+end_src
 
-* Vertico
+* TODO Vertico
 #+begin_src emacs-lisp
 (after! vertico
   (setq vertico-count 12))
 #+end_src
 
-* Symbol Outline
+* TODO Symbol Outline
 #+begin_src emacs-lisp
 (use-package! symbols-outline
   :defer t
@@ -1618,7 +1618,7 @@ Links back to the GTD task for execution tracking."
       "c o" #'symbols-outline-show)
 #+end_src
 
-* Auto Activating Snippets
+* TODO Auto Activating Snippets
 #+begin_src emacs-lisp
 (use-package! aas
   :commands aas-mode)
@@ -1626,7 +1626,7 @@ Links back to the GTD task for execution tracking."
 (setq yas-triggers-in-field t)
 #+end_src
 
-* UTF-8
+* TODO UTF-8
 #+begin_src emacs-lisp
 (set-selection-coding-system 'utf-8)
 (prefer-coding-system 'utf-8)
@@ -1639,7 +1639,8 @@ Links back to the GTD task for execution tracking."
 (when (display-graphic-p)
   (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING)))
 #+end_src
-* Prettier Page Breaks
+
+* TODO Prettier Page Breaks
 #+begin_src emacs-lisp
 (use-package! page-break-lines
   :hook (prog-mode . page-break-lines-mode)
@@ -1666,13 +1667,13 @@ Links back to the GTD task for execution tracking."
         "<C-M-next>" #'+evil-forward-page))
 #+end_src
 
-* M-x
+* TODO M-x
 #+begin_src emacs-lisp
 (map! :leader
       :desc "M-x" "SPC" #'execute-extended-command)
 #+end_src
 
-* Projectile
+* TODO Projectile
 #+begin_src emacs-lisp
 (after! projectile
   (setq projectile-project-root-files-bottom-up
@@ -1684,7 +1685,8 @@ Links back to the GTD task for execution tracking."
                 (let ((default-directory (projectile-project-root)))
                   (apply orig-fun args)))))
 #+end_src
-* Treemacs
+
+* TODO Treemacs
 #+begin_src emacs-lisp
 (after! treemacs
   (defvar treemacs-file-ignore-extensions '()
