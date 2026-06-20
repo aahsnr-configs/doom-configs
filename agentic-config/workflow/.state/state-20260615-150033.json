@@ -1,0 +1,17 @@
+{
+  "errors": [
+    "Phase 4 failed: status_code: 403, model_name: doom-stitcher-translator, body: {'message': 'litellm.BadRequestError: GeminiException BadRequestError - {\\n  \"error\": {\\n    \"code\": 403,\\n    \"message\": \"Your project has been denied access. Please contact support.\",\\n    \"status\": \"PERMISSION_DENIED\"\\n  }\\n}\\n. Received Model Group=doom-stitcher-translator\\nAvailable Model Group Fallbacks=None', 'type': None, 'param': None, 'code': '403'}",
+    "Phase 5 aborted: no translated_config from Phase 4",
+    "Phase 6: no refined_config",
+    "Phase 7: no deduplicated_config",
+    "Phase 8: no deduplicated_config from prior phases"
+  ],
+  "phase_status": {
+    "phase1_vanilla_ingestion": "completed",
+    "phase2_init_ingestion": "completed",
+    "phase3_doom_ingestion": "completed",
+    "phase4_initial_translation": "failed"
+  },
+  "files_written": [],
+  "audit_passed": null
+}

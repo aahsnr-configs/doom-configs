@@ -1,0 +1,17 @@
+{
+  "errors": [
+    "Phase 1 failed: status_code: 400, model_name: gemini-3.5-flash, body: {'message': '/chat/completions: Invalid model name passed in model=gemini-3.5-flash. Call `/v1/models` to view available models for your key.', 'type': 'None', 'param': 'None', 'code': '400', 'provider_specific_fields': {'error': '/chat/completions: Invalid model name passed in model=gemini-3.5-flash. Call `/v1/models` to view available models for your key.'}}",
+    "Phase 4 aborted: no vanilla_config from Phase 1",
+    "Phase 5 aborted: no translated_config from Phase 4",
+    "Phase 6: no refined_config",
+    "Phase 7: no deduplicated_config",
+    "Phase 8: no deduplicated_config from prior phases"
+  ],
+  "phase_status": {
+    "phase1_vanilla_ingestion": "failed",
+    "phase2_init_ingestion": "completed",
+    "phase3_doom_ingestion": "completed"
+  },
+  "files_written": [],
+  "audit_passed": null
+}

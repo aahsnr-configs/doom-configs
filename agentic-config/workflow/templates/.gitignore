@@ -1,0 +1,19 @@
+# ── Doom / Emacs ────────────────────────────────────────────────────────
+.local/
+*.elc
+auto-save-list/
+*~
+\#*\#
+
+# ── doom-stitcher workflow ─────────────────────────────────────────────
+workflow/.state/
+workflow/__pycache__/
+workflow/**/__pycache__/
+*.bak
+
+# ── Secrets ───────────────────────────────────────────────────────────
+# .env is dotenvx-encrypted and safe to commit, but its private key
+# (.env.keys, or a local DOTENV_PRIVATE_KEY export) must never be.
+.env.keys
+.env.keys.*
+.env*.local

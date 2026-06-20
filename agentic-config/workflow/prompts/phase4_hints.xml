@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<directive id="phase4-translation" version="1.0" format="markdown">
+  <metadata>
+    <title>Phase 4 — Initial Translation (Pass 1) — Additional Context</title>
+    <phase>4</phase>
+  </metadata>
+  <content><![CDATA[
+## Phase 4 — Initial Translation (Pass 1) — Additional Context
+
+When generating the `config.org` skeleton, use the following tangle rules:
+
+- Default `# tangle` target is `config.el`.
+- Use `:tangle packages.el` for the package manifest block.
+- Use `:tangle init.el` for the `doom!` macro block.
+- Add a global `#+property: header-args:emacs-lisp :tangle <file>` for each of the three targets so child src blocks inherit the correct tangle.
+
+Recommended `#+property` header at the top of `config.org`:
+
+#+property: header-args:emacs-lisp :tangle config.el :results none :lexical t
+#+property: header-args:emacs-lisp :tangle packages.el :results none :lexical t
+#+property: header-args:emacs-lisp :tangle init.el :results none :lexical t
+
+For each vanilla package, produce a `(package! <name>)` form tangled to `packages.el`. For each `setq`, produce a `(setq ...)` or `(setq-hook! ...)` form inside the appropriate `(after! <feature> ...)` block in `config.el`.
+]]></content>
+</directive>

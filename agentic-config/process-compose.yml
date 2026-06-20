@@ -1,0 +1,75 @@
+# ~/.config/doom/process-compose.yml
+version: "0.5"
+
+settings:
+  log_level: info
+
+# Global fallbacks
+environment:
+  - "REDIS_PORT=6379"
+  - "REDIS_PASSWORD=sk-litellm-local"
+  - "REDIS_HOST=127.0.0.1"
+
+processes:
+  redis:
+    # Uses ${VAR:-default} to fall back to the default value if the OS env var is empty
+    command: "redis-server --port ${REDIS_PORT:-6379} --requirepass ${REDIS_PASSWORD:-sk-litellm-local}"
+    readiness_probe:
+      exec:
+        command: "redis-cli -p ${REDIS_PORT:-6379} -a ${REDIS_PASSWORD:-sk-litellm-local} --no-auth-warning ping"
+      interval: 1s
+      timeout: 1s
+      retries: 15
+      start_period: 2s
+    availability:
+      restart: on_failure
+      max_restarts: 5
+      backoff: 1s
+    shutdown:
+      signal: 15 # SIGTERM, cleanly flush memory to disk if snapshotting
+      timeout_seconds: 5
+
+  litellm:
+    command: "litellm --config ${DOOMDIR}/litellm-config.yaml --port 4000"
+    depends_on:
+      redis:
+        condition: process_healthy # Wait for Redis to respond to ping first
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        port: 4000
+        path: /health/liveliness
+        scheme: http
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 10s
+    availability:
+      restart: on_failure
+      max_restarts: 3
+      backoff: 2s
+    shutdown:
+      signal: 15 # SIGTERM, let LiteLLM flush in-flight reqs
+      timeout_seconds: 10
+    environment:
+      - "HOME=${HOME}"
+      - "LITELLM_LOG=INFO"
+      - "LITELLM_TELEMETRY=False"
+
+  workflow:
+    command: "python main.py"
+    working_dir: "${WORKFLOW_DIR}"
+    depends_on:
+      litellm:
+        condition: process_healthy # Wait until /health/liveliness returns 200
+    availability:
+      restart: on_failure
+      max_restarts: 1
+      exit_on_end: true # Tear everything down when workflow exits
+    shutdown:
+      signal: 15
+      timeout_seconds: 30
+    environment:
+      - "PYTHONUNBUFFERED=1"
+      - "DOOMDIR=${DOOMDIR}"
+      - "OPENAI_BASE_URL=http://localhost:4000"

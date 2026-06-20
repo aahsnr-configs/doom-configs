@@ -1,0 +1,1737 @@
+#+title: Config
+
+* Personal Information
+#+begin_src emacs-lisp
+(setq user-full-name "Ahsanur Rahman"
+      user-mail-address "ahsanur041@proton.me")
+#+end_src
+
+* Sensible Defaults
+#+begin_src emacs-lisp
+(setq inhibit-compacting-font-caches t)
+(global-so-long-mode 1)
+(size-indication-mode -1)
+(global-prettify-symbols-mode -1)
+
+(setq-default internal-border-width 5)
+(add-to-list 'default-frame-alist '(internal-border-width . 5))
+
+(setq frame-title-format
+      '(""
+        (:eval
+         (if (string-match-p (regexp-quote (or (bound-and-true-p org-roam-directory) "\u0000"))
+                             (or buffer-file-name ""))
+             (replace-regexp-in-string
+              ".*/[0-9]*-?" "☰ "
+              (subst-char-in-string ?_ ?\s buffer-file-name))
+           "%b"))
+        (:eval
+         (when-let ((project-name (and (featurep 'projectile) (projectile-project-name))))
+           (unless (string= "-" project-name)
+             (format (if (buffer-modified-p)  " ◉ %s" "  ●  %s") project-name))))))
+
+(setq-default indent-tabs-mode nil
+              tab-width 2
+              fill-column 80
+
+              ;; Line spacing
+              line-spacing 0.02)
+
+(setq confirm-kill-emacs nil)
+
+(setq warning-suppress-types '((org-element)))
+
+(setq split-width-threshold 170
+      split-height-threshold nil)
+
+(setq-default bidi-inhibit-bpa t) ;; Emacs 27+ recommended
+(setq-default bidi-display-reordering nil)
+#+end_src
+
+* Evil
+#+begin_src emacs-lisp
+(after! evil
+  (setq evil-want-fine-undo t
+        evil-vsplit-window-right t
+        evil-split-window-below t
+        evil-move-beyond-eol t
+        evil-ex-substitute-global t
+        evil-move-cursor-back nil
+        evil-kill-on-visual-paste nil))
+
+;; Use visual line navigation, which is more intuitive when working with wrapped lines.
+(map! :nv "j" #'evil-next-visual-line
+      :nv "k" #'evil-previous-visual-line)
+#+end_src
+
+* Scrolling
+#+begin_src emacs-lisp
+;; Scroll one line at a time (less "jumpy" than defaults)
+(setq hscroll-step 1
+      hscroll-margin 2
+      scroll-step 1
+      scroll-margin 0
+      scroll-conservatively 101
+      scroll-preserve-screen-position t
+      auto-window-vscroll nil
+      ;; mouse
+      mouse-wheel-scroll-amount-horizontal 1
+      mouse-wheel-progressive-speed nil)
+(pixel-scroll-precision-mode 1)
+#+end_src
+
+* UI and Theming
+** Theming
+#+begin_src emacs-lisp
+(use-package! doom-themes
+  :custom
+  (doom-themes-enable-bold t)
+  (doom-themes-enable-italic t)
+  (doom-themes-treemacs-theme "doom-colors")
+  :config
+  (load-theme 'doom-tokyo-night t)
+  (doom-themes-neotree-config)
+  (doom-themes-treemacs-config)
+  (doom-themes-org-config))
+#+end_src
+
+** Fonts
+#+begin_src emacs-lisp
+(setq doom-font (font-spec :family "JetBrains Mono" :size 13.0 :weight 'medium)
+      doom-variable-pitch-font (font-spec :family "JetBrains Mono" :size 13.0)
+      doom-big-font (font-spec :family "JetBrains Mono" :size 24))
+#+end_src
+
+** Doom Modeline
+#+begin_src emacs-lisp
+(add-hook! 'doom-first-buffer-hook
+  (size-indication-mode -1)
+  (setq-default mode-line-percent-position nil))
+
+(after! doom-modeline
+  (setq doom-modeline-height 25
+        doom-modeline-column-zero-based nil
+        doom-modeline-bar-width 3
+        doom-modeline-buffer-file-size nil
+        doom-modeline-buffer-file-name-style 'file-name
+        doom-modeline-buffer-encoding nil
+        doom-modeline-percent-position nil
+        doom-modeline-major-mode-icon t
+        doom-modeline-major-mode-color-icon t
+        doom-modeline-vcs-icon t
+        doom-modeline-vcs-max-length 0))
+#+end_src
+
+** Line Numbers
+#+begin_src emacs-lisp
+(setq display-line-numbers-type t
+      display-line-numbers-width-start t)
+
+(remove-hook! '(text-mode-hook org-mode-hook) #'display-line-numbers-mode)
+
+(add-hook! (prog-mode
+            conf-mode
+            toml-ts-mode
+            yaml-mode
+            yaml-ts-mode)
+  #'display-line-numbers-mode)
+#+end_src
+
+* Editor Behaviour
+* Persist Text Scale
+#+begin_src emacs-lisp
+(after! persist-text-scale
+  (setq persist-text-scale-autosave-interval (* 7 60))
+  (persist-text-scale-mode))
+#+end_src
+
+* Parenthesis
+#+begin_src emacs-lisp
+(after! smartparens
+  ;; Enable show-smartparens-mode globally
+  (show-smartparens-global-mode +1)
+  (add-hook 'prog-mode-hook #'doom-disable-show-paren-mode-h)
+  ;; But disable it in large files to prevent performance issues
+  (add-hook 'prog-mode-hook
+            (lambda ()
+              (when (> (buffer-size) 40000)
+                (show-smartparens-mode -1)))))
+#+end_src
+
+* Indent Bars
+#+begin_src emacs-lisp
+(after! indent-bars
+  (setq indent-bars-color '(highlight :face-bg t :blend 0.165)
+        indent-bars-no-descend-string t
+        indent-bars-prefer-character t
+        indent-bars-highlight-current-depth '(:face default :blend 0.85)
+        indent-bars-depth-update-delay 0.075))
+
+;; Disable in Org mode
+(add-hook 'org-mode-hook
+  (lambda ()
+    (when (bound-and-true-p indent-bars-mode)
+      (indent-bars-mode -1))))
+
+(defun +indent-bars-disable-in-visual-h ()
+  "Disable indent-bars-mode when entering Evil visual state."
+  (when (bound-and-true-p indent-bars-mode)
+    (indent-bars-mode -1)
+    (setq-local +indent-bars-was-enabled t)))
+
+(defun +indent-bars-enable-after-visual-h ()
+  "Re-enable indent-bars-mode when exiting Evil visual state."
+  (when (bound-and-true-p +indent-bars-was-enabled)
+    (indent-bars-mode 1)
+    (kill-local-variable '+indent-bars-was-enabled)))
+
+(add-hook 'evil-visual-state-entry-hook #'+indent-bars-disable-in-visual-h)
+(add-hook 'evil-visual-state-exit-hook #'+indent-bars-enable-after-visual-h)
+
+
+(use-package! dtrt-indent
+  :config
+  (dtrt-indent-global-mode 1)
+  ;; Optional: Adjust verbosity
+  ;; 0 = silent, 1 = notify on change (default), 2 = explain why not changed, 3 = debug
+  (setq dtrt-indent-verbosity 1)
+  ;; Optional: Set minimum confidence threshold
+  ;; Only adjust if dtrt-indent is confident in its detection
+  (setq dtrt-indent-min-quality 100)
+
+  ;; Optional: Exclude certain modes where you want manual control
+  (setq dtrt-indent-mode-exclude-list '(org-mode)))
+#+end_src
+
+* Rainbow Delimiters
+#+begin_src emacs-lisp
+(use-package! rainbow-delimiters
+  :hook ((LaTeX-mode prog-mode) . rainbow-delimiters-mode))
+
+(custom-set-faces!
+  '(rainbow-delimiters-depth-1-face :foreground "#7aa2f7")  ; Blue
+  '(rainbow-delimiters-depth-2-face :foreground "#ff9e64")  ; Orange
+  '(rainbow-delimiters-depth-3-face :foreground "#9ece6a")  ; Green
+  '(rainbow-delimiters-depth-4-face :foreground "#7dcfff")  ; Cyan
+  '(rainbow-delimiters-depth-5-face :foreground "#bb9af7")  ; Magenta
+  '(rainbow-delimiters-depth-6-face :foreground "#e0af68")  ; Yellow
+  '(rainbow-delimiters-depth-7-face :foreground "#f7768e")  ; Red
+  '(rainbow-delimiters-depth-8-face :foreground "#9d7cd8")  ; Purple
+  '(rainbow-delimiters-depth-9-face :foreground "#73daca")) ; Teal
+#+end_src
+
+* Rainbow Mode
+#+begin_src emacs-lisp
+(use-package! rainbow-mode
+  :hook ((prog-mode . rainbow-mode)
+         (LaTeX-mode . rainbow-mode)
+         (org-mode . rainbow-mode))
+  :config
+  (setq rainbow-html-colors t)
+  (setq rainbow-x-colors t)
+  (setq rainbow-latex-colors t))
+#+end_src
+
+* Move Text
+#+begin_src emacs-lisp
+(defadvice! ar/indent-after-move-text-a (&rest _)
+  :after #'(move-text-up move-text-down)
+  "Indent the current line or region after moving, preserving mark state."
+  (let ((deactivate deactivate-mark))
+    (if (region-active-p)
+        (indent-region (region-beginning) (region-end))
+      (indent-region (line-beginning-position) (line-end-position)))
+    (setq deactivate-mark deactivate)))
+
+(map! :g "M-<up>"   #'move-text-up
+      :g "M-<down>" #'move-text-down)
+#+end_src
+
+* Prettify Symbols
+** Core Configuration
+#+begin_src emacs-lisp
+;;; Prettify Symbols Configuration for Doom Emacs
+
+;; Core configuration variables
+(defvar ar/prettify-symbols-base-alist
+  '(;; Relational operators
+    ("!=" . ?≠)              ; U+2260 NOT EQUAL TO
+    ("<=" . ?≤)              ; U+2264 LESS-THAN OR EQUAL TO
+    (">=" . ?≥)              ; U+2265 GREATER-THAN OR EQUAL TO
+    ("==" . ?≡)              ; U+2261 IDENTICAL TO
+
+    ;; Arrows (common across languages)
+    ("->" . ?→)              ; U+2192 RIGHTWARDS ARROW
+    ("=>" . ?⇒)              ; U+21D2 RIGHTWARDS DOUBLE ARROW
+    ("<-" . ?←)              ; U+2190 LEFTWARDS ARROW
+
+    ;; Mathematical operators
+    ("sqrt" . ?√)            ; U+221A SQUARE ROOT
+    ("sum" . ?∑)             ; U+2211 N-ARY SUMMATION
+    ("pi" . ?π)              ; U+03C0 GREEK SMALL LETTER PI
+
+    ;; Common symbols
+    ("..." . ?…)             ; U+2026 HORIZONTAL ELLIPSIS
+    ("lambda" . ?λ))         ; U+03BB GREEK SMALL LETTER LAMBDA
+  "Base prettify symbols shared across multiple modes.")
+
+
+;; Unprettify when cursor approaches symbol (critical for editing)
+(setq prettify-symbols-unprettify-at-point 'right-edge)
+
+;; Enable globally
+(global-prettify-symbols-mode +1)
+#+end_src
+
+** Custom Compose Predicate
+#+begin_src emacs-lisp
+(defun ar/prettify-symbols-compose-p-default (start end _match)
+  "Custom compose predicate that's more permissive than default.
+Allows prettification in more contexts while still being safe."
+  (let* ((syntaxes-beg (if (memq (char-syntax (char-after start)) '(?w ?_))
+                          '(?w ?_) '(?. ?\\)))
+         (syntaxes-end (if (memq (char-syntax (char-before end)) '(?w ?_))
+                          '(?w ?_) '(?. ?\\))))
+    (and
+     ;; Check that surrounding syntax matches
+     (not (memq (char-syntax (or (char-before start) ?\s)) syntaxes-beg))
+     (not (memq (char-syntax (or (char-after end) ?\s)) syntaxes-end))
+     ;; Avoid prettifying in strings (usually)
+     ;; Remove this check if you want prettification in strings
+     (not (nth 3 (syntax-ppss))))))
+
+
+(defun ar/prettify-symbols-compose-p-aggressive (start end match)
+  "More aggressive compose predicate that prettifies in comments and strings.
+Use this if you want maximum prettification."
+  (let* ((syntaxes-beg (if (memq (char-syntax (char-after start)) '(?w ?_))
+                          '(?w ?_) '(?. ?\\)))
+         (syntaxes-end (if (memq (char-syntax (char-before end)) '(?w ?_))
+                          '(?w ?_) '(?. ?\\))))
+    (and
+     ;; Check that surrounding syntax matches
+     (not (memq (char-syntax (or (char-before start) ?\s)) syntaxes-beg))
+     (not (memq (char-syntax (or (char-after end) ?\s)) syntaxes-end)))))
+#+end_src
+
+** Emacs Lisp
+#+begin_src emacs-lisp
+(defun ar/prettify-symbols-elisp-setup ()
+  "Configure prettify-symbols for Emacs Lisp modes."
+  (setq prettify-symbols-alist
+        (append
+         ar/prettify-symbols-base-alist
+         '(;; Lisp-specific symbols
+           ("defun" . ?ƒ)          ; U+0192 LATIN SMALL LETTER F WITH HOOK
+           ("defmacro" . ?μ)       ; U+03BC GREEK SMALL LETTER MU
+
+           ;; Logical operators
+           ("not" . ?¬)            ; U+00AC NOT SIGN
+           ("and" . ?∧)            ; U+2227 LOGICAL AND
+           ("or" . ?∨)             ; U+2228 LOGICAL OR
+
+           ;; Special comparisons
+           ("/=" . ?≠)             ; U+2260 NOT EQUAL TO
+
+           ;; Constants (commented out - can be confusing)
+           ;; ("nil" . ?∅)         ; U+2205 EMPTY SET
+           ;; ("t" . ?⊤)           ; U+22A4 DOWN TACK (true)
+           ))))
+
+
+;; Apply to all Emacs Lisp modes
+(add-hook! '(emacs-lisp-mode-hook
+             lisp-interaction-mode-hook
+             inferior-emacs-lisp-mode-hook)
+  #'ar/prettify-symbols-elisp-setup)
+#+end_src
+
+** Python
+#+begin_src emacs-lisp
+(defun ar/prettify-symbols-python-setup ()
+  "Configure prettify-symbols for Python modes."
+  (setq prettify-symbols-alist
+        (append
+         ar/prettify-symbols-base-alist
+         '(;; Python keywords - selective to maintain readability
+           ("def" . ?ƒ)            ; U+0192 LATIN SMALL LETTER F WITH HOOK
+           ("class" . ?𝒞)          ; U+1D49E MATHEMATICAL SCRIPT CAPITAL C
+           ("return" . ?⟼)         ; U+27FC LONG RIGHTWARDS ARROW FROM BAR
+           ("yield" . ?⟻)          ; U+27FB LONG LEFTWARDS ARROW FROM BAR
+
+           ;; Python operators
+           ("not" . ?¬)            ; U+00AC NOT SIGN
+           ("in" . ?∈)             ; U+2208 ELEMENT OF
+           ("not in" . ?∉)         ; U+2209 NOT AN ELEMENT OF
+           ("and" . ?∧)            ; U+2227 LOGICAL AND
+           ("or" . ?∨)             ; U+2228 LOGICAL OR
+
+           ;; Python constants
+           ("None" . ?∅)           ; U+2205 EMPTY SET
+           ("True" . ?⊤)           ; U+22A4 DOWN TACK
+           ("False" . ?⊥)          ; U+22A5 UP TACK
+
+           ;; Type hints (Python 3.5+)
+           ("int" . ?ℤ)            ; U+2124 DOUBLE-STRUCK CAPITAL Z
+           ("float" . ?ℝ)          ; U+211D DOUBLE-STRUCK CAPITAL R
+           ("str" . ?𝕊)            ; U+1D54A MATHEMATICAL DOUBLE-STRUCK CAPITAL S
+           ("bool" . ?𝔹)           ; U+1D539 MATHEMATICAL DOUBLE-STRUCK CAPITAL B
+
+           ;; Common type hints (commented - can be too aggressive)
+           ;; ("List" . ?𝐋)        ; U+1D40B MATHEMATICAL BOLD CAPITAL L
+           ;; ("Dict" . ?𝐃)        ; U+1D403 MATHEMATICAL BOLD CAPITAL D
+           ;; ("Set" . ?𝐒)         ; U+1D412 MATHEMATICAL BOLD CAPITAL S
+           ;; ("Tuple" . ?𝐓)       ; U+1D413 MATHEMATICAL BOLD CAPITAL T
+           ;; ("Optional" . ?⍰)    ; U+2370 APL FUNCTIONAL SYMBOL QUAD QUESTION
+           )))
+
+  ;; Custom predicate for Python to avoid conflicts with docstrings
+  (setq prettify-symbols-compose-predicate
+        #'ar/prettify-symbols-compose-p-default))
+
+
+;; Apply to Python modes
+(add-hook! '(python-mode-hook python-ts-mode-hook)
+  #'ar/prettify-symbols-python-setup)
+#+end_src
+
+** Shell/Bash
+#+begin_src emacs-lisp
+(defun ar/prettify-symbols-shell-setup ()
+  "Configure prettify-symbols for shell scripts."
+  (setq prettify-symbols-alist
+        (append
+         ar/prettify-symbols-base-alist
+         '(;; Test operators (be conservative here)
+           ("-eq" . ?=)            ; Keep simple for readability
+           ("-ne" . ?≠)            ; U+2260 NOT EQUAL TO
+           ("-le" . ?≤)            ; U+2264 LESS-THAN OR EQUAL TO
+           ("-ge" . ?≥)            ; U+2265 GREATER-THAN OR EQUAL TO
+
+           ;; Logical operators
+           ("&&" . ?∧)             ; U+2227 LOGICAL AND
+           ("||" . ?∨)             ; U+2228 LOGICAL OR
+
+           ;; Don't prettify pipe | - it's too fundamental to shell syntax
+           ))))
+
+
+;; Apply to shell modes
+(add-hook! '(sh-mode-hook bash-ts-mode-hook)
+  #'ar/prettify-symbols-shell-setup)
+#+end_src
+
+** Org Mode
+#+begin_src emacs-lisp
+(defun ar/prettify-symbols-org-setup ()
+  "Configure prettify-symbols for Org mode.
+Note: org-modern handles most visual improvements, so we're conservative here."
+  (setq prettify-symbols-alist
+        '(("->" . ?→)
+          ("<-" . ?←)
+          ("=>" . ?⇒)
+          ("<=" . ?≤)
+          (">=" . ?≥)
+
+          ("!=" . ?≠)
+          ("..." . ?…)
+
+          ;; Source block markers (subtle, won't conflict with org-modern)
+          ;; Commented out if you prefer org-modern's handling
+          ("#+BEGIN_SRC" . ?»)
+          ("#+END_SRC" . ?«)
+          ("#+begin_src" . ?»)
+          ("#+end_src" . ?«))))
+
+
+(add-hook! 'org-mode-hook #'ar/prettify-symbols-org-setup)
+#+end_src
+
+** Markdown
+#+begin_src emacs-lisp
+(defun ar/prettify-symbols-markdown-setup ()
+  "Configure prettify-symbols for Markdown mode."
+  (setq prettify-symbols-alist
+        '(("->" . ?→)
+          ("<-" . ?←)
+          ("=>" . ?⇒)
+          ("<=" . ?≤)
+          (">=" . ?≥)
+          ("!=" . ?≠)
+          ("..." . ?…)
+          ("```" . ?‣)
+          ("[ ]" . ?☐)
+          ("[x]" . ?☑)
+          ("[X]" . ?☑))))
+
+
+(add-hook! '(markdown-mode-hook gfm-mode-hook)
+  #'ar/prettify-symbols-markdown-setup)
+#+end_src
+
+** Helper Functions
+#+begin_src emacs-lisp
+(defun ar/prettify-symbols-reload ()
+  "Reload prettify-symbols-mode for current buffer.
+Useful after changing symbols configuration."
+  (interactive)
+  (when (bound-and-true-p prettify-symbols-mode)
+    (prettify-symbols-mode -1)
+    (prettify-symbols-mode +1)
+    (message "Prettify symbols reloaded")))
+
+
+(defun ar/prettify-symbols-show-at-point ()
+  "Show the actual text of prettified symbol at point in the echo area."
+  (interactive)
+  (let* ((pos (point))
+         (props (text-properties-at pos))
+         (composition (plist-get props 'composition)))
+    (if composition
+        (let ((start (previous-single-property-change
+                      (1+ pos) 'composition nil (point-min)))
+              (end (next-single-property-change
+                    pos 'composition nil (point-max))))
+          (message "Symbol: %S" (buffer-substring start end)))
+      (message "No prettified symbol at point"))))
+
+
+(defun ar/prettify-symbols-toggle-unprettify-at-point ()
+  "Cycle through unprettify-at-point options.
+nil -> right-edge -> t -> nil"
+  (interactive)
+  (setq prettify-symbols-unprettify-at-point
+        (pcase prettify-symbols-unprettify-at-point
+          ('nil 'right-edge)
+          ('right-edge t)
+          (_ nil)))
+  (ar/prettify-symbols-reload)
+  (message "Prettify unprettify-at-point: %s"
+           (pcase prettify-symbols-unprettify-at-point
+             ('nil "disabled")
+             ('right-edge "at right edge")
+             (_ "when on symbol"))))
+
+
+(defun ar/prettify-symbols-list-all ()
+  "Display all prettified symbols in current buffer's alist."
+  (interactive)
+  (if prettify-symbols-alist
+      (let ((buf (get-buffer-create "*Prettify Symbols*")))
+        (with-current-buffer buf
+          (erase-buffer)
+          (insert (format "Prettify Symbols for %s\n" major-mode))
+          (insert (make-string 50 ?=) "\n\n")
+          (insert (format "%-20s %-10s %s\n" "Text" "Symbol" "Unicode"))
+          (insert (make-string 50 ?-) "\n")
+          (dolist (pair prettify-symbols-alist)
+            (insert (format "%-20s %-10c U+%04X\n"
+                           (car pair)
+                           (cdr pair)
+                           (cdr pair))))
+          (insert "\n")
+          (insert "Unprettify at point: "
+                  (format "%s" prettify-symbols-unprettify-at-point) "\n")
+          (goto-char (point-min))
+          (special-mode))
+        (display-buffer buf))
+    (message "No prettify-symbols-alist defined for this buffer")))
+
+
+(defun ar/prettify-symbols-toggle-aggressive ()
+  "Toggle between default and aggressive prettification predicates."
+  (interactive)
+  (if (eq prettify-symbols-compose-predicate
+          #'ar/prettify-symbols-compose-p-aggressive)
+      (progn
+        (setq-local prettify-symbols-compose-predicate
+                    #'ar/prettify-symbols-compose-p-default)
+        (message "Using default prettification (no strings/comments)"))
+    (setq-local prettify-symbols-compose-predicate
+                #'ar/prettify-symbols-compose-p-aggressive)
+    (message "Using aggressive prettification (includes strings/comments)"))
+  (ar/prettify-symbols-reload))
+
+
+(defun ar/prettify-symbols-insert-unicode ()
+  "Insert a Unicode character by name or code point.
+Helpful for finding symbols to use in configuration."
+  (interactive)
+  (call-interactively #'insert-char))
+
+
+(defun ar/prettify-symbols-describe-char ()
+  "Describe the character at point, showing Unicode info."
+  (interactive)
+  (describe-char (point)))
+
+
+;; Advice to prevent prettification from breaking indentation/alignment
+;; This isn't usually needed but can help in edge cases
+(defun ar/prettify-symbols-before-save ()
+  "Temporarily disable prettify-symbols before saving.
+Re-enables it after save. Prevents indentation issues."
+  (when (bound-and-true-p prettify-symbols-mode)
+    (prettify-symbols-mode -1)
+    (add-hook 'after-save-hook #'ar/prettify-symbols-after-save nil t)))
+
+
+(defun ar/prettify-symbols-after-save ()
+  "Re-enable prettify-symbols after saving."
+  (prettify-symbols-mode +1)
+  (remove-hook 'after-save-hook #'ar/prettify-symbols-after-save t))
+
+
+;; Uncomment to enable save protection (usually not needed)
+;; (add-hook 'before-save-hook #'ar/prettify-symbols-before-save)
+#+end_src
+
+* Transient
+** Core Configuration
+#+begin_src emacs-lisp
+(setq resize-mini-windows t)
+(set-popup-rule! "^ \\*transient*" :ignore t)
+
+(after! transient
+  (require 'nerd-icons)
+
+  (defun +toggles/main-title ()
+    (concat
+     (if (fboundp 'nerd-icons-faicon)
+         (nerd-icons-faicon "nf-fa-toggle_on" :face 'transient-heading :v-adjust 0.02)
+       "")
+     (propertize " Doom Toggles" 'face 'transient-heading)))
+
+  (defun +toggles/toggle-whitespace ()
+    (interactive)
+    (setq show-trailing-whitespace (not show-trailing-whitespace))
+    (redraw-display)
+    (message "Trailing whitespace %s" (if show-trailing-whitespace "ON" "OFF")))
+
+  (transient-define-prefix +toggles/main ()
+    "Global Toggles and Actions"
+    [:description +toggles/main-title
+
+     ["Basic"
+      ("n" "Line numbers" doom/toggle-line-numbers :transient t)
+      ("a" "Aggressive indent" global-aggressive-indent-mode :transient t
+       :if (lambda () (fboundp 'global-aggressive-indent-mode)))
+      ("d" "Hungry delete" global-hungry-delete-mode :transient t
+       :if (lambda () (fboundp 'global-hungry-delete-mode)))
+      ("e" "Electric pair" electric-pair-mode :transient t)
+      ("c" "Spell check" flyspell-mode :transient t
+       :if (lambda () (featurep 'flyspell)))
+      ("s" "Pretty symbol" prettify-symbols-mode :transient t)
+      ("l" "Page break lines" global-page-break-lines-mode :transient t
+       :if (lambda () (fboundp 'global-page-break-lines-mode)))
+      ("b" "Battery" display-battery-mode :transient t)
+      ("i" "Time" display-time-mode :transient t)
+      ("m" "Modeline" (lambda () (interactive)
+                        (if (bound-and-true-p doom-modeline-mode)
+                            (doom-modeline-mode -1)
+                          (doom-modeline-mode 1)))
+       :transient t :if (lambda () (featurep 'doom-modeline)))]
+
+      ["Highlight"
+       ("h l" "Line" global-hl-line-mode :transient t)
+       ("h p" "Paren" show-paren-mode :transient t)
+       ("h s" "Symbol" symbol-overlay-mode :transient t
+        :if (lambda () (fboundp 'symbol-overlay-mode)))
+       ("h r" "Rainbow" rainbow-mode :transient t
+        :if (lambda () (fboundp 'rainbow-mode)))
+       ("h w" "Whitespace" +toggles/toggle-whitespace :transient t)
+       ("h d" "Delimiters" rainbow-delimiters-mode :transient t
+        :if (lambda () (fboundp 'rainbow-delimiters-mode)))
+       ("h i" "Indent guides" highlight-indent-guides-mode :transient t
+       :if (lambda () (fboundp 'highlight-indent-guides-mode)))
+       ("h t" "Todo" global-hl-todo-mode :transient t
+        :if (lambda () (fboundp 'global-hl-todo-mode)))]
+
+      ["Program"
+       ("f" "Flymake" flymake-mode :transient t)
+       ("O" "Hideshow" hs-minor-mode :transient t)
+       ("u" "Subword" subword-mode :transient t)
+       ("W" "Which func" which-function-mode :transient t)
+       ("E" "Debug on error" toggle-debug-on-error :transient t)
+       ("Q" "Debug on quit" toggle-debug-on-quit :transient t)
+       ("v" "Gutter" global-diff-hl-mode :transient t
+        :if (lambda () (modulep! :ui vc-gutter)))
+       ("V" "Live gutter" diff-hl-flydiff-mode :transient t
+        :if (lambda () (and (modulep! :ui vc-gutter) (fboundp 'diff-hl-flydiff-mode))))]
+
+     ["Theme"
+      ("t d" "Light (Modus)" (lambda () (interactive) (load-theme 'modus-operandi t)))
+      ("t k" "Dark (Modus)" (lambda () (interactive) (load-theme 'modus-vivendi t)))
+      ("t w" "Whiteboard" (lambda () (interactive) (load-theme 'whiteboard t)))
+      ("t t" "Tango" (lambda () (interactive) (load-theme 'tango t)))
+      ("t g" "Tango-dark" (lambda () (interactive) (load-theme 'tango-dark t)))
+      ("t l" "Leuven" (lambda () (interactive) (load-theme 'leuven t)))
+      ("t D" "Deeper-blue" (lambda () (interactive) (load-theme 'deeper-blue t)))
+      ("t o" "Other..." load-theme)
+      ("t c" "Customize" customize-themes)
+      ("t u" "Unload all" (lambda () (interactive) (mapc #'disable-theme custom-enabled-themes)))]
+
+     ["Package"
+      ("p r" "Refresh archives" package-refresh-contents)
+      ("p l" "List packages" package-list-packages)
+      ("p i" "Install package" package-install)
+      ("p d" "Delete package" package-delete)
+      ("p a" "Autoremove" package-autoremove)
+      ;; HIDDEN TOGGLE KEY:
+      ("<f6>" "" transient-quit-one :format " ")]]))
+
+;; 3. BINDING
+(map! :g "<f6>" #'+toggles/main)
+#+end_src
+
+** Prettify Symbols
+#+begin_src emacs-lisp
+(after! transient
+  (transient-define-prefix ar/prettify-symbols-transient ()
+    "Prettify Symbols Control"
+    ["" :description
+     (lambda ()
+       (concat
+        (when (and (fboundp 'nerd-icons-mdicon) (display-graphic-p))
+          (concat (nerd-icons-mdicon "nf-md-code_tags"
+                                    :face 'transient-heading
+                                    :v-adjust 0.02)
+                  " "))
+        (propertize "Prettify Symbols" 'face 'transient-heading)))
+
+     ["Toggle"
+      ("s" "Mode" prettify-symbols-mode :transient t)
+      ("a" "Aggressive" ar/prettify-symbols-toggle-aggressive :transient t)
+      ("u" "Unprettify logic" ar/prettify-symbols-toggle-unprettify-at-point :transient t)]
+
+     ["Info"
+      ("p" "At point" ar/prettify-symbols-show-at-point)
+      ("l" "List all" ar/prettify-symbols-list-all)
+      ("d" "Describe char" ar/prettify-symbols-describe-char)]
+
+     ["Edit"
+      ("r" "Reload" ar/prettify-symbols-reload :transient t)
+      ("i" "Insert Unicode" ar/prettify-symbols-insert-unicode)
+      ("q" "" transient-quit-one :format " ")]]))
+
+(map! :leader
+      (:prefix ("c" . "code")
+       :desc "Prettify symbols menu" "s" #'ar/prettify-symbols-transient))
+#+end_src
+
+* Org
+** Dynamic Directory Creation
+#+begin_src emacs-lisp
+;; Set org-directory BEFORE org loads
+(setq org-directory (file-truename (expand-file-name "~/org/")))
+
+;; Define all subdirectories
+(defvar my/org-subdirs
+  '("roam"
+    "roam/zettel"
+    "roam/literature"
+    "roam/ideas"
+    "roam/projects"
+    "roam/daily"
+    "gtd"
+    "reviews"
+    "downloads"
+    "noter"
+    "archive"
+    "attachments"
+    "backups")
+  "List of subdirectories to create under `org-directory'.")
+
+;; Helper functions
+(defun my/org-subdir (subdir)
+  "Return full path for SUBDIR under `org-directory'."
+  (expand-file-name subdir org-directory))
+
+(defun my/ensure-org-dir (subdir)
+  "Ensure SUBDIR exists under `org-directory'.
+Creates parent directories as needed. Returns the full path."
+  (let ((dir (my/org-subdir subdir)))
+    (unless (file-directory-p dir)
+      (make-directory dir t)
+      (message "Created directory: %s" dir))
+    dir))
+
+(defun my/ensure-org-file (filename &optional template)
+  "Ensure FILENAME exists in org directory with optional TEMPLATE content."
+  (let ((filepath (expand-file-name filename org-directory)))
+    (unless (file-exists-p filepath)
+      (with-temp-file filepath
+        (when template
+          (insert template))
+        (message "Created file: %s" filepath)))
+    filepath))
+
+;; Create all directories
+(mapc #'my/ensure-org-dir my/org-subdirs)
+
+;; Define convenience variables
+(defvar my/org-roam-directory (my/org-subdir "roam/"))
+(defvar my/org-gtd-directory (my/org-subdir "gtd/"))
+(defvar my/org-reviews-directory (my/org-subdir "reviews/"))
+#+end_src
+
+** Org Files Creation
+#+begin_src emacs-lisp
+(my/ensure-org-file "journal.org"
+  "#+title: Journal
+#+filetags: :journal:
+
+,* Journal Entries
+
+")
+
+(my/ensure-org-file "habits.org"
+  "#+title: Habits
+#+filetags: :habit:
+
+,* Daily Habits
+
+,* Weekly Habits
+
+,* Monthly Habits
+
+")
+
+(my/ensure-org-file "goals.org"
+  "#+title: Goals
+#+filetags: :goals:
+
+,* Life Goals
+
+,* This Year
+
+,* This Quarter
+
+,* This Month
+
+")
+
+(my/ensure-org-file "reading.org"
+  "#+title: Reading List
+#+filetags: :reading:
+
+,* Currently Reading
+
+,* To Read
+
+,* Completed
+
+")
+
+(my/ensure-org-file "meetings.org"
+  "#+title: Meetings
+#+filetags: :meeting:
+
+,* Meetings
+
+")
+
+(my/ensure-org-file "roam/ideas/fleeting.org"
+  "#+title: Fleeting Notes
+#+filetags: :fleeting:
+#+date: %<%Y-%m-%d>
+
+,* Quick Captures
+
+")
+#+end_src
+
+** Font Faces
+#+begin_src emacs-lisp
+(defun ar/org-font-setup ()
+  "Configure font faces for org-mode headings."
+  ;; (font-lock-add-keywords 'org-mode
+  ;;                         '(("^ *\\([-]\\) "
+  ;;                            (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+
+  ;; Set faces for heading levels - using relative heights only
+  (dolist (face '((org-level-1 . 1.15)
+                  (org-level-2 . 1.11)
+                  (org-level-3 . 1.10)
+                  (org-level-4 . 1.07)
+                  (org-level-5 . 1.05)
+                  (org-level-6 . 1.03)
+                  (org-level-7 . 1.02)
+                  (org-level-8 . 1.0)))
+    (set-face-attribute (car face) nil
+                        :font "JetBrainsMono Nerd Font"
+                        :weight 'bold
+                        :height (cdr face))))
+
+(add-hook! 'org-mode-hook #'ar/org-font-setup)
+#+end_src
+
+** Core Configuration
+#+begin_src emacs-lisp
+(after! org
+  ;; Core settings
+  (setq org-log-done 'time
+        org-log-into-drawer t
+        org-return-follows-link t
+
+        ;; Display settings
+        org-pretty-entities t
+        org-hide-leading-stars t
+        org-hide-emphasis-markers t
+        org-fontify-whole-heading-line t
+        org-fontify-done-headline t
+        org-fontify-quote-and-verse-blocks t
+
+        ;; Source block settings
+        org-src-fontify-natively t
+        org-src-preserve-indentation t
+        org-src-tab-acts-natively t
+        org-confirm-babel-evaluate nil  ; Don't ask for confirmation
+
+        ;; Performance optimizations
+        org-element-use-cache t
+        org-element-cache-persistent t
+        org-highlight-latex-and-related nil
+        org-startup-indented nil
+
+        ;; Startup settings
+        org-startup-folded 'overview
+        org-startup-with-inline-images nil
+        org-startup-with-latex-preview nil
+        org-cycle-separator-lines 2
+
+        org-todo-keywords
+        '((sequence "TODO(t)" "NEXT(n)" "PROG(p)" "WAIT(w@/!)" "NOTE(N)" "|" "DONE(d!)" "CANCEL(c@)")
+          (sequence "PLAN(P)" "ACTIVE(A)" "PAUSED(x)" "|" "ACHIEVED(a)" "DROPPED(D)")
+          (sequence "INBOX(i)" "GTD-NEXT(N)" "GTD-WAIT(W@/!)" "|" "GTD-DONE(D!)" "GTD-CNCL(C@)")
+          (sequence "CRITICAL(!)" "COMMENT(M)" "|" "RESOLVED(R)"))
+
+        org-todo-keyword-faces
+        '(("TODO"      . (:foreground "#f7768e" :weight bold))
+          ("NEXT"      . (:foreground "#ff9e64" :weight bold))
+          ("PROG"      . (:foreground "#7aa2f7" :weight bold))
+          ("WAIT"      . (:foreground "#e0af68" :weight bold))
+          ("NOTE"      . (:foreground "#7dcfff" :weight bold))
+          ("DONE"      . (:foreground "#9ece6a" :weight bold))
+          ("CANCEL"    . (:foreground "#565f89" :weight bold))
+          ("PLAN"      . (:foreground "#7dcfff" :weight bold))
+          ("ACTIVE"    . (:foreground "#bb9af7" :weight bold))
+          ("PAUSED"    . (:foreground "#a9b1d6" :weight bold))
+          ("ACHIEVED"  . (:foreground "#9ece6a" :weight bold))
+          ("DROPPED"   . (:foreground "#565f89" :weight bold))
+          ("INBOX"     . (:foreground "#e0af68" :weight bold))
+          ("GTD-NEXT"  . (:foreground "#7aa2f7" :weight bold))
+          ("GTD-WAIT"  . (:foreground "#ff9e64" :weight bold))
+          ("GTD-DONE"  . (:foreground "#9ece6a" :weight bold))
+          ("GTD-CNCL"  . (:foreground "#565f89" :weight bold))
+          ("CRITICAL"  . (:foreground "#f7768e" :weight bold :underline t))
+          ("COMMENT"   . (:foreground "#c0caf5" :weight normal))
+          ("RESOLVED"  . (:foreground "#9ece6a" :weight bold)))
+
+        org-tag-alist
+        '(("@work"      . ?w)
+          ("@home"      . ?h)
+          ("@computer"  . ?c)
+          ("@errands"   . ?e)
+          ("read"       . ?r)
+          ("meeting"    . ?m)
+          ("urgent"     . ?u)
+          ("someday"    . ?s))
+
+        org-priority-faces
+        '((?A . error)
+          (?B . warning)
+          (?C . success))
+
+        org-agenda-files
+        (list org-directory
+              my/org-gtd-directory)
+
+        ;; Agenda styling
+        org-agenda-block-separator ?─
+        org-agenda-time-grid
+        '((daily today require-timed)
+          (800 1000 1200 1400 1600 1800 2000)
+          " ┄┄┄┄┄ " "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄")
+        org-agenda-current-time-string
+        "◀ now ─────────────────────────────────────────────────"
+
+        ;; Performance settings for agenda
+        org-agenda-inhibit-startup t
+        org-agenda-dim-blocked-tasks nil
+        org-agenda-use-tag-inheritance nil
+        org-agenda-ignore-properties '(effort appt category)
+        org-agenda-span 'day
+        org-tags-column -80
+
+        org-refile-targets
+        '((nil :maxlevel . 3)
+          (org-agenda-files :maxlevel . 3))
+        org-refile-use-outline-path 'file
+        org-outline-path-complete-in-steps nil
+        org-refile-allow-creating-parent-nodes 'confirm
+
+        org-archive-location
+        (concat (my/org-subdir "archive/") "%s_archive::")
+
+        org-attach-id-dir (my/org-subdir "attachments/")
+        org-attach-store-link-p 'attached
+        org-attach-auto-tag "attach"))
+#+end_src
+
+** Org Mode Hooks
+#+begin_src emacs-lisp
+(add-hook! 'org-mode-hook
+  #'auto-fill-mode
+  (lambda () (setq-local yas-parents '(latex-mode))))
+
+(add-hook! 'org-agenda-mode-hook
+  (lambda ()
+    (visual-line-mode -1)
+    (toggle-truncate-lines 1)
+    (display-line-numbers-mode -1)
+    (setq mode-line-format nil)
+    (setq header-line-format nil)))
+
+(add-hook! 'org-capture-mode-hook
+  (lambda ()
+    (setq mode-line-format nil)
+    (setq header-line-format nil)))
+#+end_src
+
+** Org Bullets
+#+begin_src emacs-lisp
+(use-package! org-ibullets
+  :hook (org-mode . org-ibullets-mode))
+#+end_src
+
+** Org Structure Templates
+#+begin_src emacs-lisp
+(use-package! org-tempo
+  :after org
+  :config
+  ;; Add custom structure templates
+  (dolist (pair '(("sh" . "src shell")
+                  ("el" . "src emacs-lisp")
+                  ("py" . "src python")
+                  ("jpy" . "src jupyter-python")
+                  ("tex" . "src latex")))
+    (add-to-list 'org-structure-template-alist pair)))
+#+end_src
+
+** Transient Template Menu
+#+begin_src emacs-lisp
+(after! (org transient)
+  ;; Helper function to expand org templates
+  (defun ar/org-template-expand (str &optional mod)
+    "Expand org template STR with optional modifier MOD."
+    (let (text)
+      (when (region-active-p)
+        (setq text (buffer-substring (region-beginning) (region-end)))
+        (delete-region (region-beginning) (region-end)))
+      (insert str)
+      (org-tempo-complete-tag)
+      (when mod (insert mod) (forward-line))
+      (when text (insert text))))
+
+  ;; Specific template actions
+  (defun ar/org-insert-perl-tangled ()
+    (interactive)
+    (insert "#+HEADERS: :results output :exports both :shebang \"#!/usr/bin/env perl\"\n")
+    (ar/org-template-expand "<s" "perl"))
+
+  (defun ar/org-insert-ipython ()
+    (interactive)
+    (ar/org-template-expand "<s" "ipython :session :exports both :results raw drawer\n$0"))
+
+  ;; Title generator
+  (defun ar/org-transient-title ()
+    (concat
+     (if (and (fboundp 'nerd-icons-sucicon) (display-graphic-p))
+         (nerd-icons-sucicon "nf-custom-orgmode" :face 'transient-heading :v-adjust 0.02)
+       "")
+     (propertize " Org Template" 'face 'transient-heading)))
+
+  ;; The transient menu definition
+  (transient-define-prefix ar/org-template-transient ()
+    "Org Mode Structure Templates"
+    ["" :description ar/org-transient-title
+
+     ["Basic"
+      ("a" "ascii" (lambda () (interactive) (ar/org-template-expand "<a")))
+      ("c" "center" (lambda () (interactive) (ar/org-template-expand "<c")))
+      ("C" "comment" (lambda () (interactive) (ar/org-template-expand "<C")))
+      ("x" "example" (lambda () (interactive) (ar/org-template-expand "<e")))
+      ("E" "export" (lambda () (interactive) (ar/org-template-expand "<E")))
+      ("h" "html" (lambda () (interactive) (ar/org-template-expand "<h")))
+      ("l" "latex" (lambda () (interactive) (ar/org-template-expand "<l")))
+      ("n" "note" (lambda () (interactive) (ar/org-template-expand "<n")))
+      ("o" "quote" (lambda () (interactive) (ar/org-template-expand "<q")))
+      ("v" "verse" (lambda () (interactive) (ar/org-template-expand "<v")))]
+
+     ["Head"
+      ("i" "index" (lambda () (interactive) (ar/org-template-expand "<i")))
+      ("A" "ASCII" (lambda () (interactive) (ar/org-template-expand "<A")))
+      ("I" "INCLUDE" (lambda () (interactive) (ar/org-template-expand "<I")))
+      ("H" "HTML" (lambda () (interactive) (ar/org-template-expand "<H")))
+      ("L" "LaTeX" (lambda () (interactive) (ar/org-template-expand "<L")))]
+
+     ["Source"
+      ("s" "src" (lambda () (interactive) (ar/org-template-expand "<s")))
+      ("e" "emacs-lisp" (lambda () (interactive) (ar/org-template-expand "<s" "emacs-lisp")))
+      ("y" "python" (lambda () (interactive) (ar/org-template-expand "<s" "python")))
+      ("w" "powershell" (lambda () (interactive) (ar/org-template-expand "<s" "powershell")))
+      ("r" "ruby" (lambda () (interactive) (ar/org-template-expand "<s" "ruby")))
+      ("S" "sh" (lambda () (interactive) (ar/org-template-expand "<s" "sh")))
+      ("g" "golang" (lambda () (interactive) (ar/org-template-expand "<s" "go :imports '(\"fmt\")")))]
+
+     ["Misc"
+      ("m" "mermaid" (lambda () (interactive) (ar/org-template-expand "<s" "mermaid :file chart.png")))
+      ("u" "plantuml" (lambda () (interactive) (ar/org-template-expand "<s" "plantuml :file chart.png")))
+      ("Y" "ipython" ar/org-insert-ipython)
+      ("P" "Perl tangled" ar/org-insert-perl-tangled)
+      ("q" "Quit" transient-quit-one)
+      ("<" "insert <" self-insert-command)]])
+
+  ;; Bind '<' to trigger the menu contextually
+  (define-key org-mode-map (kbd "<")
+              (lambda ()
+                (interactive)
+                (if (or (region-active-p) (looking-back "^[ \t]*" 1))
+                    (ar/org-template-transient)
+                  (self-insert-command 1)))))
+#+end_src
+
+** Custom Agenda Commands
+#+begin_src emacs-lisp
+(after! org-agenda
+  (setq org-agenda-custom-commands
+        '(("d" "Daily Dashboard"
+           ((agenda "" ((org-agenda-span 'day)
+                        (org-agenda-start-day "0d")
+                        (org-agenda-overriding-header "📅 Today's Schedule")))
+            (tags-todo "@computer/NEXT"
+                       ((org-agenda-overriding-header "💻 @Computer Tasks")))
+            (tags-todo "@home/NEXT"
+                       ((org-agenda-overriding-header "🏠 @Home Tasks")))
+            (todo "INBOX"
+                  ((org-agenda-overriding-header "📥 Inbox (Process Later)")
+                   (org-agenda-skip-function '(org-agenda-skip-entry-if 'scheduled 'deadline))
+                   (org-agenda-files (list (expand-file-name "gtd/inbox.org" org-directory)))))
+            (todo "CRITICAL"
+                  ((org-agenda-overriding-header "🚨 CRITICAL Items")))))
+
+          ("w" "Weekly Review Agenda"
+           ((todo "INBOX" ((org-agenda-overriding-header "📥 GTD Inbox (Must Process)")
+                           (org-agenda-files (list (expand-file-name "gtd/inbox.org" org-directory)))))
+            (todo "GTD-WAIT" ((org-agenda-overriding-header "⏳ Waiting For (Follow Up)")))
+            (stuck "" ((org-agenda-overriding-header "🚫 Stuck Projects")))
+            (todo "GTD-NEXT" ((org-agenda-overriding-header "✅ All NEXT Actions")))
+            (todo "CRITICAL" ((org-agenda-overriding-header "🚨 Critical Items")))))
+
+          ("p" "Projects Dashboard"
+           ((tags "LEVEL=1" ((org-agenda-overriding-header "📋 GTD Projects (Execution)")
+                             (org-agenda-files (list (expand-file-name "gtd/projects.org" org-directory)))))
+            (tags "+ACTIVE" ((org-agenda-overriding-header "🚀 Active Project Context")
+                             (org-agenda-files (list (expand-file-name "roam/projects" my/org-roam-directory)))))))
+
+          ("g" . "GTD Views")
+          ("gn" "Next Actions"
+           ((todo "GTD-NEXT" ((org-agenda-overriding-header "✅ Next Actions")
+                              (org-agenda-sorting-strategy '(priority-down category-keep))))))
+          ("gi" "Inbox (Unprocessed)"
+           ((todo "INBOX" ((org-agenda-overriding-header "📥 GTD Inbox")
+                           (org-agenda-files (list (expand-file-name "gtd/inbox.org" org-directory)))))))
+          ("gw" "Waiting For"
+           ((todo "GTD-WAIT" ((org-agenda-overriding-header "⏳ Waiting For")))))
+          ("gs" "Stuck Projects"
+           ((stuck "" ((org-agenda-overriding-header "🚫 Stuck Projects")))))
+          ("gc" "By Context"
+           ((tags-todo "@computer/GTD-NEXT" ((org-agenda-overriding-header "💻 @Computer")))
+            (tags-todo "@home/GTD-NEXT" ((org-agenda-overriding-header "🏠 @Home")))
+            (tags-todo "@errands/GTD-NEXT" ((org-agenda-overriding-header "🚗 @Errands")))
+            (tags-todo "@phone/GTD-NEXT" ((org-agenda-overriding-header "📞 @Phone"))))))))
+#+end_src
+
+** Org GTD
+#+begin_src emacs-lisp
+(use-package! org-edna
+  :after org
+  :commands (org-edna-mode org-edna-load)
+  :hook (org-mode . org-edna-mode)
+  :config
+  (setq org-edna-use-inheritance t))
+
+(use-package! org-gtd
+  :after (org org-edna)
+  :commands (org-gtd-capture
+             org-gtd-process-inbox
+             org-gtd-engage
+             org-gtd-show-all-next
+             org-gtd-show-stuck-projects
+             org-gtd-organize)
+
+  :init
+  ;; Set GTD directory
+  (setq org-gtd-directory my/org-gtd-directory)
+
+  ;; Create GTD directory early
+  (my/ensure-org-dir "gtd")
+
+  :config
+  ;; Map GTD semantic states to our keywords
+  (setq org-gtd-keyword-mapping
+        '((todo . "INBOX")
+          (next . "GTD-NEXT")
+          (wait . "GTD-WAIT")
+          (done . "GTD-DONE")
+          (canceled . "GTD-CNCL")))
+
+  ;; Performance: Delay mode activation until idle
+  (run-with-idle-timer 5 nil
+    (lambda ()
+      (when (and (featurep 'org-gtd)
+                 (not (bound-and-true-p org-gtd-mode)))
+        (org-gtd-mode 1)))))
+#+end_src
+
+** Org Roam Configuration
+#+begin_src emacs-lisp
+(after! org-roam
+  ;; Ensure directories exist
+  (mapc #'my/ensure-org-dir
+        '("roam" "roam/zettel" "roam/literature" "roam/ideas" "roam/projects" "roam/daily"))
+
+  (setq org-roam-directory my/org-roam-directory
+        org-roam-completion-everywhere t
+        org-roam-verbose nil  ; Performance
+        org-roam-node-display-template
+        (concat "${title:60} "
+                (propertize "${tags:20}" 'face 'org-tag))
+
+        ;; Capture templates for Zettelkasten
+        org-roam-capture-templates
+        '(("z" "zettel" plain
+           "* Core Idea\n%?\n\n* Elaboration\n\n* Evidence\n\n* Connections\n- Related: \n- Contrasts: \n\n* Source\n"
+           :target (file+head "zettel/${slug}.org"
+                              "#+title: ${title}\n#+filetags: :zettel:permanent:\n#+date: %<%Y-%m-%d>\n\n")
+           :unnarrowed t)
+
+          ("l" "literature" plain
+           "* Source\n- Author: %?\n- Title: \n- Year: \n- Type: [Book/Article/Paper]\n- URL: \n\n* Summary\n\n* Key Takeaways\n\n* Quotes\n#+begin_quote\n\n#+end_quote\n\n* Personal Notes\n\n* Related Ideas\n"
+           :target (file+head "literature/${slug}.org"
+                              "#+title: ${title}\n#+filetags: :literature:\n#+date: %<%Y-%m-%d>\n\n")
+           :unnarrowed t)
+
+          ("p" "project note" plain
+           "* Project Context\n%?\n\n* Why This Matters\n\n* Key Resources\n\n* Research Notes\n\n* Decision Log\n\n* Learnings\n\n* GTD Link\n- Tasks: [[file:../../gtd/projects.org][GTD Projects]]\n"
+           :target (file+head "projects/${slug}.org"
+                              "#+title: Project: ${title}\n#+filetags: :project:context:\n#+date: %<%Y-%m-%d>\n\n")
+           :unnarrowed t)
+
+          ("i" "fleeting" plain
+           "* %?\n\n* Context\n\n* Process Later\n- [ ] Convert to permanent note OR\n- [ ] Extract actionable tasks\n"
+           :target (file+head "ideas/fleeting.org"
+                              "#+title: Fleeting Notes\n#+filetags: :fleeting:\n\n")
+           :prepend t
+           :unnarrowed t))
+
+        ;; Dailies configuration
+        org-roam-dailies-directory "daily/"
+        org-roam-dailies-capture-templates
+        '(("d" "default" entry "* %<%H:%M> %?"
+           :target (file+head "%<%Y-%m-%d>.org"
+                              "#+title: %<%Y-%m-%d %A>\n#+filetags: :daily:\n\n"))
+          ("n" "note" entry "* NOTE %?"
+           :target (file+head "%<%Y-%m-%d>.org"
+                              "#+title: %<%Y-%m-%d %A>\n#+filetags: :daily:\n\n"))
+          ("c" "critical" entry "* CRITICAL %?"
+           :target (file+head "%<%Y-%m-%d>.org"
+                              "#+title: %<%Y-%m-%d %A>\n#+filetags: :daily:\n\n"))))
+
+  ;; Delay database sync to improve startup
+  (add-hook! 'after-init-hook
+    (run-with-idle-timer 10 nil #'org-roam-db-autosync-enable)))
+
+
+(use-package! org-roam-ui
+  :after org-roam
+  :commands (org-roam-ui-mode org-roam-ui-open)
+  :config
+  (setq org-roam-ui-sync-theme t
+        org-roam-ui-follow t
+        org-roam-ui-update-on-save t
+        org-roam-ui-open-on-start nil))
+
+
+(use-package! consult-org-roam
+  :after (org-roam consult)
+  :commands (consult-org-roam-search
+             consult-org-roam-forward-links
+             consult-org-roam-backlinks)
+  :config
+  (setq consult-org-roam-grep-func #'consult-ripgrep
+        consult-org-roam-buffer-narrow-key ?r
+        consult-org-roam-buffer-after-buffers t))
+#+end_src
+
+** GTD & Zettelkasten Integration
+#+begin_src emacs-lisp
+(defun ar/gtd-to-zettel ()
+  "Create a Zettelkasten project note from current GTD project.
+Links back to the GTD task for execution tracking."
+  (interactive)
+  (unless (derived-mode-p 'org-mode)
+    (user-error "Must be in an org-mode buffer"))
+
+  (let* ((heading (org-get-heading t t t t))
+         (gtd-id (org-id-get-create))
+         (context (or (org-entry-get nil "CONTEXT") ""))
+         (node-title (concat "Project: " heading)))
+
+    ;; Create org-roam project note
+    (org-roam-capture-
+     :node (org-roam-node-create :title node-title)
+     :props (list :immediate-finish nil
+                  :gtd-id gtd-id
+                  :heading heading
+                  :context context))
+
+    ;; Add backlink to GTD project
+    (save-excursion
+      (org-back-to-heading t)
+      (org-end-of-meta-data t)
+      (unless (looking-at "\n")
+        (insert "\n"))
+      (insert (format "- Zettelkasten Note: [[id:%s][%s]]\n\n"
+                      gtd-id node-title)))
+
+    (message "Created Zettelkasten project note: %s" node-title)))
+
+
+(defun ar/zettel-to-gtd ()
+  "Extract actionable tasks from current Zettelkasten note to GTD inbox."
+  (interactive)
+  (unless (and (derived-mode-p 'org-mode)
+               (string-prefix-p my/org-roam-directory (buffer-file-name)))
+    (user-error "Must be in an org-roam buffer"))
+
+  (let* ((note-title (or (org-roam-node-title (org-roam-node-at-point))
+                         (file-name-base (buffer-file-name))))
+         (note-id (org-id-get-create))
+         (tasks '()))
+
+    ;; Collect TODO items (including new keywords)
+    (org-map-entries
+     (lambda ()
+       (push (org-get-heading t t t t) tasks))
+     "TODO|NEXT|CRITICAL|NOTE" 'file)
+
+    (if tasks
+        (progn
+          (find-file (expand-file-name "gtd/inbox.org" org-directory))
+          (goto-char (point-max))
+          (unless (bolp) (insert "\n"))
+          (insert (format "\n* From: %s\n" note-title))
+          (dolist (task (reverse tasks))
+            (insert (format "** INBOX %s\n:PROPERTIES:\n:CREATED: %s\n:FROM: [[id:%s][%s]]\n:END:\n"
+                            task
+                            (format-time-string "[%Y-%m-%d %a]")
+                            note-id
+                            note-title)))
+          (save-buffer)
+          (message "Extracted %d tasks to GTD inbox" (length tasks)))
+      (message "No tasks found in current note"))))
+
+
+(defun ar/fleeting-to-permanent ()
+  "Open fleeting notes file for processing into permanent notes."
+  (interactive)
+  (find-file (expand-file-name "ideas/fleeting.org" my/org-roam-directory)))
+
+
+(defun ar/weekly-review ()
+  "Create or open weekly review template."
+  (interactive)
+  (let* ((week-string (format-time-string "%Y-W%W"))
+         (review-file (expand-file-name
+                       (format "%s-review.org" week-string)
+                       my/org-reviews-directory)))
+
+    ;; Create review file if it doesn't exist
+    (unless (file-exists-p review-file)
+      (let ((inbox-count
+             (length (org-map-entries t "TODO=\"INBOX\""
+                                     (list (expand-file-name "gtd/inbox.org" org-directory)))))
+            (next-count
+             (length (org-map-entries t "TODO=\"NEXT\""
+                                     (list (expand-file-name "gtd/next.org" org-directory)))))
+            (wait-count
+             (length (org-map-entries t "TODO=\"WAIT\""
+                                     (list (expand-file-name "gtd/projects.org" org-directory)))))
+            (critical-count
+             (length (org-map-entries t "TODO=\"CRITICAL\""
+                                     (list org-directory))))
+            (project-count
+             (length (org-map-entries t "LEVEL=1"
+                                     (list (expand-file-name "gtd/projects.org" org-directory)))))
+            (fleeting-count
+             (with-temp-buffer
+               (let ((fleeting (expand-file-name "ideas/fleeting.org" my/org-roam-directory)))
+                 (if (file-exists-p fleeting)
+                     (progn
+                       (insert-file-contents fleeting)
+                       (count-matches "^\\* " (point-min) (point-max)))
+                   0)))))
+
+        (with-temp-file review-file
+          (insert "#+title: Weekly Review - " week-string "\n")
+          (insert "#+date: " (format-time-string "%Y-%m-%d") "\n")
+          (insert "#+filetags: :review:\n\n")
+
+          (insert "* GTD Review\n")
+          (insert "** INBOX Processing\n")
+          (insert (format "- [ ] Process GTD inbox to zero (%d items)\n" inbox-count))
+          (insert "  - Location: [[file:../gtd/inbox.org][GTD Inbox]]\n\n")
+
+          (insert "** CRITICAL Items\n")
+          (insert (format "- [ ] Review and address critical items (%d items)\n" critical-count))
+          (insert "  - These require immediate attention\n\n")
+
+          (insert "** Calendar Review\n")
+          (insert "- [ ] Review past week's calendar\n")
+          (insert "- [ ] Review next 2 weeks ahead\n\n")
+
+          (insert "** Next Actions\n")
+          (insert (format "- [ ] Review all NEXT actions (%d items)\n" next-count))
+          (insert "- [ ] Clean up stale items\n")
+          (insert "- [ ] Ensure actionable next actions\n\n")
+
+          (insert "** Waiting For\n")
+          (insert (format "- [ ] Review WAIT items (%d items)\n" wait-count))
+          (insert "- [ ] Follow up as needed\n\n")
+
+          (insert "** Projects\n")
+          (insert (format "- [ ] Review all active projects (%d items)\n" project-count))
+          (insert "- [ ] Ensure each project has at least one NEXT action\n")
+          (insert "- [ ] Move inactive projects to Someday/Maybe\n\n")
+
+          (insert "** Someday/Maybe\n")
+          (insert "- [ ] Review Someday/Maybe list\n")
+          (insert "- [ ] Activate any projects ready to start\n\n")
+
+          (insert "* Zettelkasten Review\n")
+          (insert "** Fleeting Notes\n")
+          (insert (format "- [ ] Process fleeting notes (%d notes)\n" fleeting-count))
+          (insert "  - Location: [[file:../roam/ideas/fleeting.org][Fleeting Notes]]\n\n")
+
+          (insert "** Quality Check\n")
+          (insert "- [ ] Review notes created this week\n")
+          (insert "- [ ] Identify notes needing more connections\n")
+          (insert "- [ ] Tag drafts as permanent when ready\n\n")
+
+          (insert "** Knowledge Gaps\n")
+          (insert "- [ ] Identify missing notes/connections\n")
+          (insert "- [ ] Plan next research directions\n\n")
+
+          (insert "* Weekly Reflections\n")
+          (insert "** What Went Well?\n\n\n")
+          (insert "** What Could Improve?\n\n\n")
+          (insert "** Key Insights This Week\n\n\n")
+          (insert "** Next Week's Focus\n\n\n")
+
+          (insert "* Weekly Metrics\n")
+          (insert "- GTD Tasks Completed: \n")
+          (insert "- Permanent Notes Created: \n")
+          (insert "- Literature Notes Added: \n")
+          (insert "- Projects Advanced: \n")
+          (insert "- Critical Items Resolved: \n"))))
+
+    ;; Open review file
+    (find-file review-file)
+    (goto-char (point-min))
+    (when (re-search-forward "^\\*\\* What Went Well" nil t)
+      (org-end-of-line))))
+#+end_src
+
+** Org Capture
+#+begin_src emacs-lisp
+(after! org-capture
+  ;; Smart capture dispatcher
+  (defun ar/capture-dispatch ()
+    "Smart capture: GTD task, Zettelkasten note, or journal."
+    (interactive)
+    (let ((choice (read-char-choice
+                   "Capture: [t]ask [c]ritical [n]ote [f]leeting [j]ournal [q]uit? "
+                   '(?t ?c ?n ?f ?j ?q))))
+      (pcase choice
+        (?t (call-interactively #'org-gtd-capture))
+        (?c (org-capture nil "c"))
+        (?n (org-roam-capture))
+        (?f (find-file (expand-file-name "ideas/fleeting.org" my/org-roam-directory))
+            (goto-char (point-max))
+            (unless (bolp) (insert "\n"))
+            (insert (format "\n* %s\n\n" (read-string "Fleeting thought: ")))
+            (backward-char 1))
+        (?j (org-capture nil "j"))
+        (?q (keyboard-quit)))))
+
+  ;; Capture templates
+  (setq org-capture-templates
+        `(;; Quick journal entry
+          ("j" "Journal" entry
+           (file+olp+datetree ,(expand-file-name "journal.org" org-directory))
+           "* %<%H:%M> %?\n"
+           :empty-lines 1)
+
+          ;; Critical item
+          ("c" "Critical" entry
+           (file+headline ,(expand-file-name "gtd/inbox.org" org-directory) "Inbox")
+           "* CRITICAL %?\n:PROPERTIES:\n:CREATED: %U\n:END:\n"
+           :empty-lines 1)
+
+          ;; Meeting notes
+          ("m" "Meeting" entry
+           (file+headline ,(expand-file-name "journal.org" org-directory) "Meetings")
+           "* %<%Y-%m-%d> %? :meeting:\n:PROPERTIES:\n:CREATED: %U\n:ATTENDEES: \n:END:\n\n** Agenda\n\n** Notes\n\n** Action Items\n- [ ] \n"
+           :empty-lines 1
+           :clock-in t
+           :clock-resume t)
+
+          ;; Reading/book notes
+          ("b" "Book/Article" entry
+           (file ,(expand-file-name "reading.org" org-directory))
+           "* %? :read:\n:PROPERTIES:\n:CREATED: %U\n:AUTHOR: \n:TYPE: [Book/Article/Paper]\n:STATUS: [Reading/Finished]\n:END:\n\n** Summary\n\n** Key Ideas\n\n** Personal Thoughts\n"
+           :empty-lines 1)
+
+          ;; Habit
+          ("h" "Habit" entry
+           (file+headline ,(expand-file-name "habits.org" org-directory) "Habits")
+           "* TODO %?\nSCHEDULED: %(format-time-string \"<%Y-%m-%d %a .+1d>\")\n:PROPERTIES:\n:STYLE: habit\n:END:\n"
+           :empty-lines 1)
+
+          ;; Quick task to inbox
+          ("t" "Task" entry
+           (file+headline ,(expand-file-name "gtd/inbox.org" org-directory) "Inbox")
+           "* INBOX %?\n:PROPERTIES:\n:CREATED: %U\n:END:\n"
+           :empty-lines 1)
+
+          ;; Comment/Note
+          ("n" "Note/Comment" entry
+           (file+headline ,(expand-file-name "journal.org" org-directory) "Notes")
+           "* NOTE %?\n:PROPERTIES:\n:CREATED: %U\n:END:\n"
+           :empty-lines 1))))
+#+end_src
+
+** Org Habit
+#+begin_src emacs-lisp
+(after! org-habit
+  (setq org-habit-graph-column 60
+        org-habit-show-habits-only-for-today t
+        org-habit-preceding-days 21
+        org-habit-following-days 7)
+
+  ;; Custom glyphs using nerd-icons
+  (when (fboundp 'nerd-icons-codicon)
+    (setq org-habit-completed-glyph
+          (string-to-char (nerd-icons-codicon "nf-cod-check"))
+          org-habit-today-glyph
+          (string-to-char (nerd-icons-codicon "nf-cod-circle_filled")))))
+#+end_src
+
+** Org Download
+#+begin_src emacs-lisp
+(after! org-download
+  (setq org-download-screenshot-method "grim -g \"$(slurp)\" - | swappy -f - -o -"
+        org-download-image-dir "assets"
+        org-download-method 'attach
+        org-download-timestamp "%Y-%m-%d-%H%M%S_"
+        org-download-display-inline t
+        org-image-actual-width 600)
+
+  (advice-add 'org-download-dnd :after #'org-download-display-inline-images))
+#+end_src
+
+** Org Src Buffer Naming
+#+begin_src emacs-lisp
+(defun ar/org-src-simplify-buffer-name (base-buffer-name lang)
+  "Return static buffer name 'src code' for Org source blocks."
+  "src code")
+
+(advice-add 'org-src--construct-edit-buffer-name
+            :override #'ar/org-src-simplify-buffer-name)
+#+end_src
+
+** Org Pomodoro
+#+begin_src emacs-lisp
+(after! org-pomodoro
+  (alert-add-rule :category "org-pomodoro"
+                  :style (cond (alert-growl-command 'growl)
+                               (alert-notifier-command 'notifier)
+                               (alert-libnotify-command 'libnotify)
+                               (t alert-default-style))))
+#+end_src
+
+** Org Remark
+#+begin_src emacs-lisp
+(use-package! org-remark
+  :after org
+  :config
+  (org-remark-global-tracking-mode +1))
+#+end_src
+
+* Which Key
+#+begin_src emacs-lisp
+(after! which-key
+  (setq which-key-idle-delay 0.3
+        which-key-allow-imprecise-window-fit nil
+        which-key-separator " → "
+        which-key-max-display-columns nil
+        which-key-popup-type 'side-window
+        which-key-side-window-max-width 0.33)
+  (pushnew!
+   which-key-replacement-alist
+   '(("" . "\\`+?evil[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "◂\\1"))
+   '(("\\`g s" . "\\`evilem--?motion-\\(.*\\)") . (nil . "◃\\1"))
+   ))
+#+end_src
+
+* Vertico
+#+begin_src emacs-lisp
+(after! vertico
+  (setq vertico-count 12))
+#+end_src
+
+* Symbol Outline
+#+begin_src emacs-lisp
+(use-package! symbols-outline
+  :defer t
+  :config
+  (setq symbols-outline-window-position 'right)
+  (symbols-outline-follow-mode 1))
+
+(add-hook! 'eglot-managed-mode-hook
+  (setq-local symbols-outline-fetch-fn #'symbols-outline-lsp-fetch))
+
+(map! :leader
+      :desc "Toggle symbols outline"
+      "c o" #'symbols-outline-show)
+#+end_src
+
+* Auto Activating Snippets
+#+begin_src emacs-lisp
+(use-package! aas
+  :commands aas-mode)
+
+(setq yas-triggers-in-field t)
+#+end_src
+
+* UTF-8
+#+begin_src emacs-lisp
+(set-selection-coding-system 'utf-8)
+(prefer-coding-system 'utf-8)
+(set-language-environment "UTF-8")
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(setq locale-coding-system 'utf-8)
+;; Treat clipboard input as UTF-8 string first; compound text next, etc.
+(when (display-graphic-p)
+  (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING)))
+#+end_src
+* Prettier Page Breaks
+#+begin_src emacs-lisp
+(use-package! page-break-lines
+  :hook (prog-mode . page-break-lines-mode)
+  :init
+  (autoload 'turn-on-page-break-lines-mode "page-break-lines")
+  :config
+  (defvaralias 'page-break-lines-max-width 'fill-column)
+  (defun +evil-forward-page ()
+    "Call `forward-page', such that it works as intended with evil-mode."
+    (interactive)
+    (when (eq (char-after (point)) ?\^L)
+      (forward-char 1))
+    (forward-page))
+  (defun +evil-backward-page ()
+    "Call `backward-page', such that it works as intended with evil-mode."
+    (interactive)
+    (when (eq (char-after (point)) ?\^L)
+      (backward-char 1))
+    (backward-page))
+  (map! :prefix "g"
+        :desc "Prev page break" :nv "[" #'+evil-backward-page
+        :desc "Next page break" :nv "]" #'+evil-forward-page)
+  (map! "<C-M-prior>" #'+evil-backward-page
+        "<C-M-next>" #'+evil-forward-page))
+#+end_src
+
+* M-x
+#+begin_src emacs-lisp
+(map! :leader
+      :desc "M-x" "SPC" #'execute-extended-command)
+#+end_src
+
+* Projectile
+#+begin_src emacs-lisp
+(after! projectile
+  (setq projectile-project-root-files-bottom-up
+        '(".projectile" ".git"))
+  (setq projectile-indexing-method 'alien)
+  (setq projectile-enable-caching t)
+  (advice-add 'projectile-find-file :around
+              (lambda (orig-fun &rest args)
+                (let ((default-directory (projectile-project-root)))
+                  (apply orig-fun args)))))
+#+end_src
+* Treemacs
+#+begin_src emacs-lisp
+(after! treemacs
+  (defvar treemacs-file-ignore-extensions '()
+    "File extension which `treemacs-ignore-filter' will ensure are ignored")
+  (defvar treemacs-file-ignore-globs '()
+    "Globs which will are transformed to `treemacs-file-ignore-regexps' which `treemacs-ignore-filter' will ensure are ignored")
+  (defvar treemacs-file-ignore-regexps '()
+    "RegExps to be tested to ignore files, generated from `treeemacs-file-ignore-globs'")
+  (defun treemacs-file-ignore-generate-regexps ()
+    "Generate `treemacs-file-ignore-regexps' from `treemacs-file-ignore-globs'"
+    (setq treemacs-file-ignore-regexps (mapcar 'dired-glob-regexp treemacs-file-ignore-globs)))
+  (if (equal treemacs-file-ignore-globs '()) nil (treemacs-file-ignore-generate-regexps))
+  (defun treemacs-ignore-filter (file full-path)
+    "Ignore files specified by `treemacs-file-ignore-extensions', and `treemacs-file-ignore-regexps'"
+    (or (member (file-name-extension file) treemacs-file-ignore-extensions)
+        (let ((ignore-file nil))
+          (dolist (regexp treemacs-file-ignore-regexps ignore-file)
+            (setq ignore-file (or ignore-file (if (string-match-p regexp full-path) t nil)))))))
+  (add-to-list 'treemacs-ignored-file-predicates #'treemacs-ignore-filter))
+
+(setq treemacs-file-ignore-extensions
+      '(;; LaTeX
+        "aux"
+        "ptc"
+        "fdb_latexmk"
+        "fls"
+        "synctex.gz"
+        "toc"
+        ;; LaTeX - glossary
+        "glg"
+        "glo"
+        "gls"
+        "glsdefs"
+        "ist"
+        "acn"
+        "acr"
+        "alg"
+        ;; LaTeX - pgfplots
+        "mw"
+        ;; LaTeX - pdfx
+        "pdfa.xmpi"
+        ))
+(setq treemacs-file-ignore-globs
+      '(;; LaTeX
+        "*/_minted-*"
+        ;; AucTeX
+        "*/.auctex-auto"
+        "*/_region_.log"
+        "*/_region_.tex"))
+#+end_src

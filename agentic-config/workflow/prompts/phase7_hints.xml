@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<directive id="phase7-audit" version="1.0" format="markdown">
+  <metadata>
+    <title>Phase 7 — Audit — Additional Context</title>
+    <phase>7</phase>
+  </metadata>
+  <content><![CDATA[
+## Phase 7 — Audit — Additional Context
+
+Verification checklist (each item must pass before approving the output):
+
+- [ ] Every `package!` exists in Doom's pinned package list (or is declared as a `:recipe` or `:pin` in `packages.el`).
+- [ ] Every macro used (`after!`, `use-package!`, `map!`, `setq-hook!`, `add-hook!`, `def-hydra!`, `package!`) is a real Doom macro defined in `doomemacs/core/core-lib.el` or `lisp/doom-lib.el`.
+- [ ] All `(after! <feature> ...)` blocks reference a feature symbol, NOT a major mode name. Common mistake: `(after! python-mode ...)` — correct: `(after! python ...)`.
+- [ ] Tangle headers are valid: every `#+begin_src` is matched by `#+end_src`; `:tangle` paths resolve to `config.el`, `init.el`, or `packages.el` relative to `~/.config/doom/`.
+- [ ] No vanilla `use-package` without the bang (unless wrapping a third-party lib that requires it).
+- [ ] `(doom! :config literate ...)` is present in the `init.el` source block.
+- [ ] `load-path` update for `lisp/` is present and correct.
+- [ ] `(require 'org-src-context)` is wrapped in `(after! org ...)`.
+- [ ] No `setq` duplicates Doom defaults (this is enforced by Phase 6 but the auditor should re-check).
+]]></content>
+</directive>

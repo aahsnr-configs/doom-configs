@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<directive id="phase5-refinement" version="1.0" format="markdown">
+  <metadata>
+    <title>Phase 5 — Refinement — Additional Context</title>
+    <phase>5</phase>
+  </metadata>
+  <content><![CDATA[
+## Phase 5 — Refinement — Additional Context
+
+After the initial Pass-1 translation, perform these deterministic edits before calling the LLM:
+
+1. Add this boilerplate to the very top of the `config.el` source block (before any user code):
+
+   (add-to-list 'load-path (expand-file-name "lisp/" doom-user-dir))
+
+2. Add an `(after! org ...)` block (inside `config.el` content) that does:
+
+   (after! org
+     (require 'org-src-context))
+
+3. Transients: if vanilla used `defhydra`, `transient.define`, or `easy-hydra`, port them to Doom's `def-hydra!` and bind keys with `map!`.
+4. Honor `early-init.el` settings by emitting them under a `:tangle early-init.el` source block only when strictly necessary.
+]]></content>
+</directive>
