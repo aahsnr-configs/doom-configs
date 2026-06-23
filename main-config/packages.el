@@ -26,9 +26,6 @@
 ;;   :recipe (:host github :repo "username/repo"
 ;;            :files ("some-file.el" "src/lisp/*.el")))
 
-(package! org-ibullets
-          :recipe (:host github :repo "jamescherti/org-ibullets.el"))
-
 ;; If you'd like to disable a package included with Doom, you can do so here
 ;; with the `:disable' property:
 ;; (package! smartparens :disable t)
@@ -54,22 +51,21 @@
 ;; ...or multiple packages
 ;; (unpin! pinned-package another-pinned-package)
 ;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
-(unpin! treemacs)
+
+;;(unpin! treemacs)
 (package! rainbow-delimiters)
 (package! rainbow-mode)
 (package! persist-text-scale)
 (package! org-super-agenda)
 (package! flycheck-plantuml :disable t)
-(package! flymake-popon :disable t)
-(package! evil-escape :disable t)
-(package! org-edna)
-(package! org-gtd)
-(package! org-remark)
-(package! org-roam-ui)
-(package! consult-org-roam)
+;;(package! flymake-popon :disable t)
+;;(package! evil-escape :disable t)
 (package! symbols-outline)
-(package! aas)
 (package! jinx)
 (package! dtrt-indent)
 (package! string-inflection)
-(package! page-break-lines :recipe (:host github :repo "purcell/page-break-lines"))
+(package! page-break-lines)
+(package! dired-open)
+(package! org-fragtog)
+(package! magit-todos)
+(package! flymake-ruff)

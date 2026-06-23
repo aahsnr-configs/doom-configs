@@ -1,14 +1,6 @@
-#+TITLE: My Doom Emacs Config
-#+AUTHOR: Ahsanur Rahman
-
-* Personal Information
-#+begin_src emacs-lisp
 (setq user-full-name "Ahsanur Rahman"
       user-mail-address "ahsanur041@proton.me")
-#+end_src
 
-* Sensible Defaults
-#+begin_src emacs-lisp
 ;; (global-so-long-mode 1)
 (size-indication-mode -1)
 (global-prettify-symbols-mode 1)
@@ -70,11 +62,6 @@
 (when (display-graphic-p)
   (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING)))
 
-#+end_src
-
-* UI and Theming
-** Theming
-#+begin_src emacs-lisp
 (use-package! doom-themes
   :custom
   (doom-themes-enable-bold t)
@@ -86,10 +73,7 @@
   (doom-themes-neotree-config)
   (doom-themes-treemacs-config)
   (doom-themes-org-config))
-#+end_src
 
-** Catppuccin Theme
-#+begin_src emacs-lisp
 ;; (use-package! catppuccin-theme
 ;;   :config
 ;;   (setq catppuccin-flavor 'mocha)
@@ -125,10 +109,7 @@
 
 
 ;;   )
-#+end_src
 
-** Doom Modeline
-#+begin_src emacs-lisp
 (add-hook! 'doom-first-buffer-hook
   (size-indication-mode -1)
   (setq-default mode-line-percent-position nil))
@@ -145,10 +126,7 @@
         doom-modeline-major-mode-color-icon t
         doom-modeline-vcs-icon t
         doom-modeline-vcs-max-length 0))
-#+end_src
 
-** Line Numbers
-#+begin_src emacs-lisp
 ;; Enable absolute line numbers globally by default.
 (setq display-line-numbers-type t)
 (setq display-line-numbers-width 4)
@@ -172,18 +150,11 @@
 ;;             yaml-mode
 ;;             yaml-ts-mode)
 ;;   #'display-line-numbers-mode)
-#+end_src
 
-** Fonts
-#+begin_src emacs-lisp
 (setq doom-font (font-spec :family "JetBrains Mono" :size 13.0 :weight 'medium)
       doom-variable-pitch-font (font-spec :family "JetBrains Mono" :size 13.0)
       doom-big-font (font-spec :family "JetBrains Mono" :size 24))
-#+end_src
 
-* Editor Behaviour
-** Rainbow Delimiters
-#+begin_src emacs-lisp
 (use-package! rainbow-delimiters
   :hook ((text-mode . rainbow-delimiters-mode)
          (LaTeX-mode . rainbow-delimiters-mode)
@@ -200,10 +171,7 @@
  '(rainbow-delimiters-depth-7-face :foreground "#fab387")
  '(rainbow-delimiters-depth-8-face :foreground "#cdd6f4")
  '(rainbow-delimiters-depth-9-face :foreground "#bac2de"))
-#+end_src
 
-** Rainbow Mode
-#+begin_src emacs-lisp
 (use-package! rainbow-mode
   :hook ((prog-mode . rainbow-mode)
          (org-mode . rainbow-mode)))
@@ -217,10 +185,7 @@
 ;;   (setq rainbow-html-colors t)
 ;;   (setq rainbow-x-colors t)
 ;;   (setq rainbow-latex-colors t))
-#+end_src
 
-** Which-key
-#+begin_src emacs-lisp
 (after! which-key
   (setq which-key-idle-delay 0.3
         which-key-allow-imprecise-window-fit nil
@@ -228,10 +193,7 @@
         which-key-max-display-columns nil
         which-key-popup-type 'side-window
         which-key-side-window-max-width 0.33))
-#+end_src
 
-** Parenthesis
-#+begin_src emacs-lisp
 (after! smartparens
   ;; Enable show-smartparens-mode globally
   (show-smartparens-global-mode +1)
@@ -241,10 +203,7 @@
             (lambda ()
               (when (> (buffer-size) 40000)
                 (show-smartparens-mode -1)))))
-#+end_src
 
-** Indent-Bars
-#+begin_src emacs-lisp
 (after! indent-bars
   (setq indent-bars-color '(highlight :face-bg t :blend 0.165)
         indent-bars-no-descend-string t
@@ -286,16 +245,10 @@
 
   ;; Optional: Exclude certain modes where you want manual control
   (setq dtrt-indent-mode-exclude-list '(org-mode)))
-#+end_src
 
-** Sudo Edit
-#+begin_src emacs-lisp
 (use-package! sudo-edit
   :commands sudo-edit)
-#+end_src
 
-** Transient
-#+begin_src emacs-lisp
 (setq resize-mini-windows t)
 (set-popup-rule! "^ \\*transient*" :ignore t)
 
@@ -377,16 +330,10 @@
 
 ;; 3. BINDING
 (map! :g "<f6>" #'+toggles/main)
-#+end_src
 
-** M-x
-#+begin_src emacs-lisp
 (map! :leader
       :desc "M-x" "SPC" #'execute-extended-command)
-#+end_src
 
-** Prettier Page Breaks
-#+begin_src emacs-lisp
 (use-package! page-break-lines
   :init
   ;; `derived-mode-p' walks the mode ancestry, so prog-mode covers
@@ -424,10 +371,7 @@
 ;; SPC t P — toggle page-break-lines-mode in the current buffer.
 (map! :leader
       :desc "Toggle page-break-lines" "t P" #'page-break-lines-mode)
-#+end_src
 
-** Spell Checking
-#+begin_src emacs-lisp
 (map! "M-$"   #'jinx-correct    ; replaces ispell-word; upstream recommendation
       "C-M-$" #'jinx-languages) ; change language(s) for the current buffer
 
@@ -461,10 +405,7 @@
           :n "z=" #'jinx-correct
           :n "[s" #'jinx-previous
           :n "]s" #'jinx-next)))
-#+end_src
 
-** Dired
-#+begin_src emacs-lisp
 (after! dired
   (setq dired-listing-switches "-agho --group-directories-first"
         delete-by-moving-to-trash t
@@ -475,16 +416,10 @@
   :config
   (setq dired-open-extensions '(("png" . "imv")
                                 ("mp4" . "mpv"))))
-#+end_src
 
-** Vertico
-#+begin_src emacs-lisp
 (after! vertico
   (setq vertico-count 12))
-#+end_src
 
-** Projectile
-#+begin_src emacs-lisp
 (after! projectile
   (setq projectile-project-root-files-bottom-up
         '(".projectile" ".git"))
@@ -494,11 +429,7 @@
               (lambda (orig-fun &rest args)
                 (let ((default-directory (projectile-project-root)))
                   (apply orig-fun args)))))
-#+end_src
 
-* Org
-** Org Mode
-#+begin_src emacs-lisp
 (defvar my/org-directory "~/org/" "The root directory for Org files.")
 (defvar my/org-roam-directory (expand-file-name "roam/" my/org-directory) "The directory for Org Roam files.")
 
@@ -562,10 +493,7 @@
 (use-package! org-super-agenda
   :after org-agenda
   :hook (org-agenda-mode-hook . org-super-agenda-mode))
-#+end_src
 
-** Org Modern
-#+begin_src emacs-lisp
 (after! org-modern
   (setq
    org-modern-hide-stars "· "
@@ -578,21 +506,14 @@
                            ("quote" "❝" "❞"))
    org-modern-checkbox '((todo . "☐") (done . "☑") (cancel . "☒") (priority . "⚑") (on . "◉") (off . "○"))
    org-modern-tag-faces `((:foreground ,(face-attribute 'default :foreground) :weight bold :box (:line-width (1 . -1) :color "#45475a")))))
-#+end_src
 
-** Org Src Buffer Naming
-#+begin_src emacs-lisp
 (defun ar/org-src-simplify-buffer-name (base-buffer-name lang)
   "Return static buffer name 'src code' for Org source blocks."
   "src code")
 
 (advice-add 'org-src--construct-edit-buffer-name
             :override #'ar/org-src-simplify-buffer-name)
-#+end_src
 
-* Development Tools
-** Jupyter
-#+begin_src emacs-lisp
 ;; (after! ob-jupyter
 ;;   ;; Default header arguments for jupyter-python blocks
 ;;   (setq org-babel-default-header-args:jupyter-python
@@ -624,10 +545,7 @@
 ;;       (when (featurep 'ob-jupyter)
 ;;         (org-babel-jupyter-make-local-aliases)
 ;;         (org-babel-jupyter-override-src-block "python")))))
-#+end_src
 
-** Version Control
-#+begin_src emacs-lisp
 (after! magit
   (setq magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
 
@@ -636,31 +554,17 @@
   :config (magit-todos-mode 1))
 
 (setq forge-owned-accounts '(("aahsnr")))
-#+end_src
 
-** Vertico
-#+begin_src emacs-lisp
 (after! vertico
   (setq vertico-count 10))
-#+end_src
 
-* Python Programming
-#+begin_src emacs-lisp
 (with-eval-after-load 'python
   (set-eglot-client! '(python-mode python-ts-mode) '("pyrefly" "lsp"))
   (set-formatter! 'ruff :modes '(python-mode python-ts-mode)))
 
 (setq +python-ipython-repl-args '("-i" "--simple-prompt" "--no-color-info"))
 (setq +python-jupyter-repl-args '("--simple-prompt"))
-#+end_src
 
-* LaTeX
-** Engine and Compilation Setup
-Configure latexmk as the build system with LuaLaTeX as the modern default engine.
-Doom's latex module (+cdlatex +fold) already provides AUCTeX, CDLaTeX, folding support,
-and SyncTeX integration. We extend it with latexmk for robust multi-pass compilation.
-
-#+begin_src emacs-lisp
 (after! tex
   (setq TeX-engine 'luatex)
   (setq TeX-output-dir "build/")
@@ -707,10 +611,7 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
   ;; Automatically revert PDF buffer after compilation
   (add-hook 'TeX-after-compilation-finished-functions
             #'TeX-revert-document-buffer))
-#+end_src
 
-** Org Mode Integration
-#+begin_src emacs-lisp
 (after! org
   (add-to-list 'org-preview-latex-process-alist
                '(luamagick
@@ -759,10 +660,7 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
 ;;   (add-hook 'org-mode-hook 'org-latex-preview-auto-mode)
 ;;   (setq org-latex-preview-live t)
 ;;   (setq org-latex-preview-auto-mode-inline-preview-delay 0.25))
-#+end_src
 
-** Keybindings
-#+begin_src emacs-lisp
 (map! :after latex
       :map LaTeX-mode-map
       :localleader
@@ -790,10 +688,7 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
        :desc "Preview fragment" "p" #'org-latex-preview
        :desc "Export to PDF" "e" #'org-latex-export-to-pdf
        :desc "Toggle fragtog" "f" #'org-fragtog-mode))
-#+end_src
 
-* Nix
-#+begin_src emacs-lisp
 (use-package! lsp-nix
   :after (lsp-mode)
   :custom
@@ -804,10 +699,7 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
 
 (use-package! nix-ts-mode
  :mode "\\.nix\\'")
-#+end_src
 
-* PDF Tools
-#+begin_src emacs-lisp
 (setq-default pdf-view-display-size 'fit-page)
 (add-hook! 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode)
 
@@ -817,10 +709,7 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
                (side . right)
                (window-width . 0.5)
                (window-height . fit-window-to-buffer)))
-#+end_src
 
-* Citar
-#+begin_src emacs-lisp
 (after! citar
   (setq citar-indicators nil)
 
@@ -829,10 +718,7 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
           (suffix . " ${=type=:12} ${tags keywords:*}")
           (preview . "${author editor:%etal} (${year issued date}) ${title}, ${journal journaltitle publisher container-title collection-title}.\n")
           (note . "Notes on ${author editor:%etal}, ${title}"))))
-#+end_src
 
-* Keybindings
-#+begin_src emacs-lisp
 ;; (map! :leader
 ;;       (:prefix ("t" . "toggle")
 ;;        :desc "Toggle eshell split"            "e" #'+eshell/toggle
@@ -892,10 +778,7 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
 ;;        :desc "Restart"             "r" #'dape-restart
 ;;        :desc "Kill debug session"  "k" #'dape-kill
 ;;        :desc "Debug REPL"          "R" #'dape-repl))
-#+end_src
 
-* Projectile
-#+begin_src emacs-lisp
 (after! projectile
   ;; Ensure clean project root detection
   (setq projectile-project-root-files-bottom-up
@@ -912,4 +795,3 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
               (lambda (orig-fun &rest args)
                 (let ((default-directory (projectile-project-root)))
                   (apply orig-fun args)))))
-#+end_src

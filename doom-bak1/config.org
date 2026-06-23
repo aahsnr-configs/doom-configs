@@ -1,12 +1,20 @@
 #+title: Config
 
-* TODO Personal Information
+* DONE Personal Information
+CLOSED: [2026-06-21 Sun 01:46]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 01:46]
+:END:
 #+begin_src emacs-lisp
 (setq user-full-name "Ahsanur Rahman"
       user-mail-address "ahsanur041@proton.me")
 #+end_src
 
-* TODO Sensible Defaults
+* DONE Sensible Defaults
+CLOSED: [2026-06-21 Sun 05:41]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 05:41]
+:END:
 #+begin_src emacs-lisp
 (setq inhibit-compacting-font-caches t)
 (global-so-long-mode 1)
@@ -48,7 +56,11 @@
 (setq-default bidi-display-reordering nil)
 #+end_src
 
-* TODO Evil
+* DONE Evil
+CLOSED: [2026-06-21 Sun 05:38]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 05:38]
+:END:
 #+begin_src emacs-lisp
 (after! evil
   (setq evil-want-fine-undo t
@@ -64,7 +76,11 @@
       :nv "k" #'evil-previous-visual-line)
 #+end_src
 
-* TODO Scrolling
+* DONE Scrolling
+CLOSED: [2026-06-21 Sun 05:40]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 05:40]
+:END:
 #+begin_src emacs-lisp
 ;; Scroll one line at a time (less "jumpy" than defaults)
 (setq hscroll-step 1
@@ -80,8 +96,16 @@
 (pixel-scroll-precision-mode 1)
 #+end_src
 
-* TODO UI and Theming
-** Theming
+* DONE UI and Theming
+CLOSED: [2026-06-21 Sun 18:39]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 18:39]
+:END:
+** DONE Theming
+CLOSED: [2026-06-21 Sun 05:41]
+:LOGBOOK:
+- State "DONE"       from              [2026-06-21 Sun 05:41]
+:END:
 #+begin_src emacs-lisp
 (use-package! doom-themes
   :custom
@@ -95,14 +119,22 @@
   (doom-themes-org-config))
 #+end_src
 
-** Fonts
+** DONE Fonts
+CLOSED: [2026-06-21 Sun 05:41]
+:LOGBOOK:
+- State "DONE"       from              [2026-06-21 Sun 05:41]
+:END:
 #+begin_src emacs-lisp
 (setq doom-font (font-spec :family "JetBrains Mono" :size 13.0 :weight 'medium)
       doom-variable-pitch-font (font-spec :family "JetBrains Mono" :size 13.0)
       doom-big-font (font-spec :family "JetBrains Mono" :size 24))
 #+end_src
 
-** Doom Modeline
+** DONE Doom Modeline
+CLOSED: [2026-06-21 Sun 05:42]
+:LOGBOOK:
+- State "DONE"       from              [2026-06-21 Sun 05:42]
+:END:
 #+begin_src emacs-lisp
 (add-hook! 'doom-first-buffer-hook
   (size-indication-mode -1)
@@ -122,7 +154,11 @@
         doom-modeline-vcs-max-length 0))
 #+end_src
 
-** Line Numbers
+** DONE Line Numbers
+CLOSED: [2026-06-21 Sun 05:45]
+:LOGBOOK:
+- State "DONE"       from              [2026-06-21 Sun 05:45]
+:END:
 #+begin_src emacs-lisp
 (setq display-line-numbers-type t
       display-line-numbers-width-start t)
@@ -137,15 +173,27 @@
   #'display-line-numbers-mode)
 #+end_src
 
-* TODO Editor Behaviour
-* TODO Persist Text Scale
+* DONE Editor Behaviour
+CLOSED: [2026-06-21 Sun 18:40]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 18:40]
+:END:
+* DONE Persist Text Scale
+CLOSED: [2026-06-21 Sun 18:40]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 18:40]
+:END:
 #+begin_src emacs-lisp
 (after! persist-text-scale
   (setq persist-text-scale-autosave-interval (* 7 60))
   (persist-text-scale-mode))
 #+end_src
 
-* TODO Parenthesis
+* DONE Parenthesis
+CLOSED: [2026-06-21 Sun 18:42]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 18:42]
+:END:
 #+begin_src emacs-lisp
 (after! smartparens
   ;; Enable show-smartparens-mode globally
@@ -158,7 +206,11 @@
                 (show-smartparens-mode -1)))))
 #+end_src
 
-* TODO Indent Bars
+* DONE Indent Bars
+CLOSED: [2026-06-21 Sun 18:44]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 18:44]
+:END:
 #+begin_src emacs-lisp
 (after! indent-bars
   (setq indent-bars-color '(highlight :face-bg t :blend 0.165)
@@ -203,7 +255,11 @@
   (setq dtrt-indent-mode-exclude-list '(org-mode)))
 #+end_src
 
-* TODO Rainbow Delimiters
+* DONE Rainbow Delimiters
+CLOSED: [2026-06-21 Sun 05:47]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 05:47]
+:END:
 #+begin_src emacs-lisp
 (use-package! rainbow-delimiters
   :hook ((LaTeX-mode prog-mode) . rainbow-delimiters-mode))
@@ -220,7 +276,11 @@
   '(rainbow-delimiters-depth-9-face :foreground "#73daca")) ; Teal
 #+end_src
 
-* TODO Rainbow Mode
+* DONE Rainbow Mode
+CLOSED: [2026-06-21 Sun 05:48]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-21 Sun 05:48]
+:END:
 #+begin_src emacs-lisp
 (use-package! rainbow-mode
   :hook ((prog-mode . rainbow-mode)
@@ -586,7 +646,11 @@ Re-enables it after save. Prevents indentation issues."
 ;; (add-hook 'before-save-hook #'ar/prettify-symbols-before-save)
 #+end_src
 
-* TODO Transient
+* DONE Transient
+CLOSED: [2026-06-22 Mon 05:41]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-22 Mon 05:41]
+:END:
 ** TODO Core Configuration
 #+begin_src emacs-lisp
 (setq resize-mini-windows t)
@@ -1552,7 +1616,11 @@ Links back to the GTD task for execution tracking."
   (advice-add 'org-download-dnd :after #'org-download-display-inline-images))
 #+end_src
 
-** TODO Org Src Buffer Naming
+** DONE Org Src Buffer Naming
+CLOSED: [2026-06-22 Mon 18:04]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-22 Mon 18:04]
+:END:
 #+begin_src emacs-lisp
 (defun ar/org-src-simplify-buffer-name (base-buffer-name lang)
   "Return static buffer name 'src code' for Org source blocks."
@@ -1580,7 +1648,11 @@ Links back to the GTD task for execution tracking."
   (org-remark-global-tracking-mode +1))
 #+end_src
 
-* TODO Which Key
+* DONE Which Key
+CLOSED: [2026-06-22 Mon 05:41]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-22 Mon 05:41]
+:END:
 #+begin_src emacs-lisp
 (after! which-key
   (setq which-key-idle-delay 0.3
@@ -1596,7 +1668,11 @@ Links back to the GTD task for execution tracking."
    ))
 #+end_src
 
-* TODO Vertico
+* DONE Vertico
+CLOSED: [2026-06-22 Mon 19:18]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-22 Mon 19:18]
+:END:
 #+begin_src emacs-lisp
 (after! vertico
   (setq vertico-count 12))
@@ -1626,7 +1702,11 @@ Links back to the GTD task for execution tracking."
 (setq yas-triggers-in-field t)
 #+end_src
 
-* TODO UTF-8
+* DONE UTF-8
+CLOSED: [2026-06-22 Mon 05:42]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-22 Mon 05:42]
+:END:
 #+begin_src emacs-lisp
 (set-selection-coding-system 'utf-8)
 (prefer-coding-system 'utf-8)
@@ -1640,7 +1720,11 @@ Links back to the GTD task for execution tracking."
   (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING)))
 #+end_src
 
-* TODO Prettier Page Breaks
+* DONE Prettier Page Breaks
+CLOSED: [2026-06-22 Mon 05:46]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-22 Mon 05:46]
+:END:
 #+begin_src emacs-lisp
 (use-package! page-break-lines
   :hook (prog-mode . page-break-lines-mode)
@@ -1667,13 +1751,21 @@ Links back to the GTD task for execution tracking."
         "<C-M-next>" #'+evil-forward-page))
 #+end_src
 
-* TODO M-x
+* DONE M-x
+CLOSED: [2026-06-22 Mon 05:46]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-22 Mon 05:46]
+:END:
 #+begin_src emacs-lisp
 (map! :leader
       :desc "M-x" "SPC" #'execute-extended-command)
 #+end_src
 
-* TODO Projectile
+* DONE Projectile
+CLOSED: [2026-06-22 Mon 19:19]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2026-06-22 Mon 19:19]
+:END:
 #+begin_src emacs-lisp
 (after! projectile
   (setq projectile-project-root-files-bottom-up
