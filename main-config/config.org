@@ -7,9 +7,15 @@
       user-mail-address "ahsanur041@proton.me")
 #+end_src
 
+* Load path
+
+#+begin_src emacs-lisp
+(add-load-path! "lisp")
+#+end_src
+
 * Sensible Defaults
 #+begin_src emacs-lisp
-;; (global-so-long-mode 1)
+(global-so-long-mode 1)
 (size-indication-mode -1)
 (global-prettify-symbols-mode 1)
 
@@ -207,16 +213,6 @@
 (use-package! rainbow-mode
   :hook ((prog-mode . rainbow-mode)
          (org-mode . rainbow-mode)))
-
-;;; Alternate code
-;; (use-package! rainbow-mode
-;;   :hook ((prog-mode . rainbow-mode)
-;;          (LaTeX-mode . rainbow-mode)
-;;          (org-mode . rainbow-mode))
-;;   :config
-;;   (setq rainbow-html-colors t)
-;;   (setq rainbow-x-colors t)
-;;   (setq rainbow-latex-colors t))
 #+end_src
 
 ** Which-key
@@ -232,15 +228,109 @@
 
 ** Parenthesis
 #+begin_src emacs-lisp
+;;; ============================================================
+;;; Org Source Block Bracket Syntax Fix
+;;; ============================================================
+;;; In org-mode, < and > are matching delimiters in the syntax table.
+;;; This causes false mismatch errors in code like (> 2 4) inside
+;;; org source blocks. This fix changes them to regular punctuation,
+;;; but only outside strings and comments, and only inside src blocks.
+
+;;;###autoload
+(defun my/org-src-bracket-syntax-fix (start end)
+  "Fix syntax of < and > inside org source blocks.
+Changes < and > to regular punctuation, but only outside strings
+and comments, and only inside src blocks."
+  (when (eq major-mode 'org-mode)
+    (save-excursion
+      (goto-char start)
+      (while (re-search-forward "[<>]" end t)
+        (let ((match-pos (1- (point))))
+          (save-excursion
+            (when (and (re-search-backward
+                        "[[:space:]]*#\\+\\(begin\\|end\\)_src\\_>" nil t)
+                       (string-equal (downcase (match-string 1)) "begin"))
+              (let ((ppss (syntax-ppss match-pos)))
+                (unless (or (nth 3 ppss)   ; inside string
+                            (nth 4 ppss))  ; inside comment
+                  (put-text-property match-pos (1+ match-pos)
+                                     'syntax-table (string-to-syntax "_")))))))))))
+
+;; Store org's original syntax-propertize-function so we can call it
+;; from our wrapper instead of replacing it entirely.
+(defvar-local my/org-original-syntax-propertize-function nil
+  "Stores the original `syntax-propertize-function' for org buffers.")
+
+(defun my/org-syntax-propertize-wrapper (start end)
+  "Call org's original syntax propertize function, then fix < > in src blocks."
+  (when (functionp my/org-original-syntax-propertize-function)
+    (funcall my/org-original-syntax-propertize-function start end))
+  (my/org-src-bracket-syntax-fix start end))
+
+(after! org
+  (add-hook! 'org-mode-hook
+    (defun my/org-src-syntax-fix-h ()
+      "Wrap org's syntax-propertize-function to fix angle brackets in src blocks."
+      (setq-local my/org-original-syntax-propertize-function
+                  syntax-propertize-function)
+      (setq-local syntax-propertize-function
+                  #'my/org-syntax-propertize-wrapper))))
+
+;;; ============================================================
+;;; Replace Smartparens with Built-in electric-pair-mode
+;;; ============================================================
+
+;; 1. Prevent smartparens from being activated globally.
+;;    Per Doom's FAQ, this is the correct way to disable smartparens.
+;;    We cannot use (package! smartparens :disable t) because it's
+;;    a core package and will break Doom's base config.
+(remove-hook 'doom-first-buffer-hook #'smartparens-global-mode)
+
+;; 2. Remove Doom's hook that disables smartparens navigation.
+;;    This hook is added when +smartparens flag is enabled in init.el.
+;;    It's harmless when smartparens is off, but we remove it for cleanliness.
 (after! smartparens
-  ;; Enable show-smartparens-mode globally
-  (show-smartparens-global-mode +1)
-  (add-hook 'prog-mode-hook #'doom-disable-show-paren-mode-h)
-  ;; But disable it in large files to prevent performance issues
-  (add-hook 'prog-mode-hook
-            (lambda ()
-              (when (> (buffer-size) 40000)
-                (show-smartparens-mode -1)))))
+  (remove-hook! 'after-change-major-mode-hook
+    #'doom-disable-smartparens-navigate-skip-match-h))
+
+;; 3. Enable electric-pair-mode globally.
+;;    This is Emacs' built-in delimiter pairing system.
+;;    It provides:
+;;      - Auto-pairing of (), [], {}, "", '', etc. based on syntax tables
+;;      - Region wrapping (select text, type ( to wrap it)
+;;      - Skip-over closing delimiters (type ) when already at ) to move past)
+;;      - Balance preservation (won't create unbalanced delimiters)
+;;      - Adjacent pair deletion (backspace between () deletes both)
+(electric-pair-mode 1)
+
+;; 4. Configure electric-pair-mode settings.
+(setq-default
+ ;; Skip whitespace when deciding whether to skip over closing delimiter
+ electric-pair-skip-whitespace t
+ ;; Open an extra newline when pressing RET between adjacent pairs
+ electric-pair-open-newline-between-pairs t
+ ;; Delete adjacent pairs when backspacing between them
+ electric-pair-delete-adjacent-pairs t)
+
+;; 5. In org-mode, inhibit < pairing to not interfere with org-tempo.
+;;    This allows org-tempo templates like <s to work without electric-pair
+;;    inserting a matching >.
+(after! org
+  (add-hook! 'org-mode-hook
+    (defun my/org-disable-angle-bracket-pairing-h ()
+      "Inhibit < pairing in org-mode for org-tempo compatibility."
+      (setq-local electric-pair-inhibit-predicate
+                  (lambda (c)
+                    (or (funcall (default-value 'electric-pair-inhibit-predicate) c)
+                        (char-equal c ?<)))))))
+
+;; 6. Enable echo area display for offscreen matching brackets.
+;;    Doom already enables show-paren-mode for bracket highlighting.
+;;    This variable (added in Emacs 29.1) shows the matching bracket's
+;;    line in the echo area when the matching bracket is offscreen.
+;;    Options: nil (off), t (echo area), 'overlay, 'child-frame
+(when (boundp 'show-paren-context-when-offscreen)
+  (setq show-paren-context-when-offscreen t))
 #+end_src
 
 ** Indent-Bars
@@ -252,39 +342,11 @@
         indent-bars-highlight-current-depth '(:face default :blend 0.85)
         indent-bars-depth-update-delay 0.075))
 
-;; ;; Disable in Org mode
-;; (add-hook 'org-mode-hook
-;;   (lambda ()
-;;     (when (bound-and-true-p indent-bars-mode)
-;;       (indent-bars-mode -1))))
-
-;; (defun +indent-bars-disable-in-visual-h ()
-;;   "Disable indent-bars-mode when entering Evil visual state."
-;;   (when (bound-and-true-p indent-bars-mode)
-;;     (indent-bars-mode -1)
-;;     (setq-local +indent-bars-was-enabled t)))
-
-;; (defun +indent-bars-enable-after-visual-h ()
-;;   "Re-enable indent-bars-mode when exiting Evil visual state."
-;;   (when (bound-and-true-p +indent-bars-was-enabled)
-;;     (indent-bars-mode 1)
-;;     (kill-local-variable '+indent-bars-was-enabled)))
-
-;; (add-hook 'evil-visual-state-entry-hook #'+indent-bars-disable-in-visual-h)
-;; (add-hook 'evil-visual-state-exit-hook #'+indent-bars-enable-after-visual-h)
-
-
 (use-package! dtrt-indent
   :config
   (dtrt-indent-global-mode 1)
-  ;; Optional: Adjust verbosity
-  ;; 0 = silent, 1 = notify on change (default), 2 = explain why not changed, 3 = debug
   (setq dtrt-indent-verbosity 1)
-  ;; Optional: Set minimum confidence threshold
-  ;; Only adjust if dtrt-indent is confident in its detection
   (setq dtrt-indent-min-quality 100)
-
-  ;; Optional: Exclude certain modes where you want manual control
   (setq dtrt-indent-mode-exclude-list '(org-mode)))
 #+end_src
 
@@ -298,85 +360,6 @@
 #+begin_src emacs-lisp
 (setq resize-mini-windows t)
 (set-popup-rule! "^ \\*transient*" :ignore t)
-
-(after! transient
-  (require 'nerd-icons)
-
-  (defun +toggles/main-title ()
-    (concat
-     (if (fboundp 'nerd-icons-faicon)
-         (nerd-icons-faicon "nf-fa-toggle_on" :face 'transient-heading :v-adjust 0.02)
-       "")
-     (propertize " Doom Toggles" 'face 'transient-heading)))
-
-  (defun +toggles/toggle-whitespace ()
-    (interactive)
-    (setq show-trailing-whitespace (not show-trailing-whitespace))
-    (redraw-display)
-    (message "Trailing whitespace %s" (if show-trailing-whitespace "ON" "OFF")))
-
-  (transient-define-prefix +toggles/main ()
-    "Global Toggles and Actions"
-    [:description +toggles/main-title
-
-     ["Basic"
-      ("n" "Line numbers" doom/toggle-line-numbers :transient t)
-      ("a" "Aggressive indent" global-aggressive-indent-mode :transient t
-       :if (lambda () (fboundp 'global-aggressive-indent-mode)))
-      ("d" "Hungry delete" global-hungry-delete-mode :transient t
-       :if (lambda () (fboundp 'global-hungry-delete-mode)))
-      ("e" "Electric pair" electric-pair-mode :transient t)
-      ("c" "Spell check" flyspell-mode :transient t
-       :if (lambda () (featurep 'flyspell)))
-      ("s" "Pretty symbol" prettify-symbols-mode :transient t)
-      ("l" "Page break lines" global-page-break-lines-mode :transient t
-       :if (lambda () (fboundp 'global-page-break-lines-mode)))
-      ("b" "Battery" display-battery-mode :transient t)
-      ("i" "Time" display-time-mode :transient t)
-      ("m" "Modeline" (lambda () (interactive)
-                        (if (bound-and-true-p doom-modeline-mode)
-                            (doom-modeline-mode -1)
-                          (doom-modeline-mode 1)))
-       :transient t :if (lambda () (featurep 'doom-modeline)))]
-
-      ["Highlight"
-       ("h l" "Line" global-hl-line-mode :transient t)
-       ("h p" "Paren" show-paren-mode :transient t)
-       ("h s" "Symbol" symbol-overlay-mode :transient t
-        :if (lambda () (fboundp 'symbol-overlay-mode)))
-       ("h r" "Rainbow" rainbow-mode :transient t
-        :if (lambda () (fboundp 'rainbow-mode)))
-       ("h w" "Whitespace" +toggles/toggle-whitespace :transient t)
-       ("h d" "Delimiters" rainbow-delimiters-mode :transient t
-        :if (lambda () (fboundp 'rainbow-delimiters-mode)))
-       ("h i" "Indent guides" highlight-indent-guides-mode :transient t
-       :if (lambda () (fboundp 'highlight-indent-guides-mode)))
-       ("h t" "Todo" global-hl-todo-mode :transient t
-        :if (lambda () (fboundp 'global-hl-todo-mode)))]
-
-      ["Program"
-       ("f" "Flymake" flymake-mode :transient t)
-       ("O" "Hideshow" hs-minor-mode :transient t)
-       ("u" "Subword" subword-mode :transient t)
-       ("W" "Which func" which-function-mode :transient t)
-       ("E" "Debug on error" toggle-debug-on-error :transient t)
-       ("Q" "Debug on quit" toggle-debug-on-quit :transient t)
-       ("v" "Gutter" global-diff-hl-mode :transient t
-        :if (lambda () (modulep! :ui vc-gutter)))
-       ("V" "Live gutter" diff-hl-flydiff-mode :transient t
-        :if (lambda () (and (modulep! :ui vc-gutter) (fboundp 'diff-hl-flydiff-mode))))]
-
-     ["Package"
-      ("p r" "Refresh archives" package-refresh-contents)
-      ("p l" "List packages" package-list-packages)
-      ("p i" "Install package" package-install)
-      ("p d" "Delete package" package-delete)
-      ("p a" "Autoremove" package-autoremove)
-      ;; HIDDEN TOGGLE KEY:
-      ("<f6>" "" transient-quit-one :format " ")]]))
-
-;; 3. BINDING
-(map! :g "<f6>" #'+toggles/main)
 #+end_src
 
 ** M-x
@@ -428,9 +411,6 @@
 
 ** Spell Checking
 #+begin_src emacs-lisp
-(map! "M-$"   #'jinx-correct    ; replaces ispell-word; upstream recommendation
-      "C-M-$" #'jinx-languages) ; change language(s) for the current buffer
-
 (use-package! jinx
   :hook (doom-first-buffer . global-jinx-mode)
 
@@ -453,14 +433,13 @@
     (add-to-list 'vertico-multiform-categories
                  '(jinx grid
                         (vertico-grid-annotate . 20)
-                        (vertico-count . 4))))
+                        (vertico-count . 4)))))
 
-  (when (modulep! :editor evil)
-    (map! :map jinx-mode-map
-          :n "zg" #'jinx-correct
-          :n "z=" #'jinx-correct
-          :n "[s" #'jinx-previous
-          :n "]s" #'jinx-next)))
+  (map! :map jinx-mode-map
+        :n "zg" #'jinx-correct
+        :n "z=" #'jinx-correct
+        :n "[s" #'jinx-previous
+        :n "]s" #'jinx-next)
 #+end_src
 
 ** Dired
@@ -513,13 +492,15 @@
         org-default-notes-file (expand-file-name "inbox.org" my/org-directory)
 
         org-src-fontify-natively t
+        org-src-preserve-indentation t
+        org-src-tab-acts-natively t
         org-hide-emphasis-markers nil
         org-hide-leading-stars nil
         ;; org-fontify-quote-and-verse-blocks nil
         ;; org-fontify-whole-heading-line nil
         ;; org-fontify-done-headline nil
         ;; org-highlight-latex-and-related nil
-        org-startup-folded 'showeverything
+        org-startup-folded 'overview
         org-cycle-separator-lines 2
 
         org-confirm-babel-evaluate nil
@@ -590,40 +571,161 @@
             :override #'ar/org-src-simplify-buffer-name)
 #+end_src
 
+** Org Src Context
+#+begin_src emacs-lisp
+(use-package! org-src-context
+  :hook (after-init . org-src-context-mode)
+  :custom
+  (org-src-context-narrow-p t)
+  (org-src-context-max-filesize 500000)
+  :config
+  (with-eval-after-load 'apheleia
+    (add-hook 'org-src-mode-hook
+              (lambda ()
+                (apheleia-mode 1)))))
+#+end_src
+
+** Org Structure Templates
+#+begin_src emacs-lisp
+(use-package! org-tempo
+  :after org
+  :config
+  ;; Add custom structure templates
+  (dolist (pair '(("sh" . "src shell")
+                  ("el" . "src emacs-lisp")
+                  ("py" . "src python")
+                  ("jpy" . "src jupyter-python")
+                  ("tex" . "src latex")))
+    (add-to-list 'org-structure-template-alist pair)))
+#+end_src
+
+** Transient Template Menu
+#+begin_src emacs-lisp
+(after! (org transient)
+  ;; Helper function to expand org templates
+  (defun ar/org-template-expand (str &optional mod)
+    "Expand org template STR with optional modifier MOD."
+    (let (text)
+      (when (region-active-p)
+        (setq text (buffer-substring (region-beginning) (region-end)))
+        (delete-region (region-beginning) (region-end)))
+      (insert str)
+      (org-tempo-complete-tag)
+      (when mod (insert mod) (forward-line))
+      (when text (insert text))))
+
+  ;; Specific template actions
+  (defun ar/org-insert-perl-tangled ()
+    (interactive)
+    (insert "#+HEADERS: :results output :exports both :shebang \"#!/usr/bin/env perl\"\n")
+    (ar/org-template-expand "<s" "perl"))
+
+  (defun ar/org-insert-ipython ()
+    (interactive)
+    (ar/org-template-expand "<s" "ipython :session :exports both :results raw drawer\n$0"))
+
+  ;; Title generator
+  (defun ar/org-transient-title ()
+    (concat
+     (if (and (fboundp 'nerd-icons-sucicon) (display-graphic-p))
+         (nerd-icons-sucicon "nf-custom-orgmode" :face 'transient-heading :v-adjust 0.02)
+       "")
+     (propertize " Org Template" 'face 'transient-heading)))
+
+  ;; The transient menu definition
+  (transient-define-prefix ar/org-template-transient ()
+    "Org Mode Structure Templates"
+    ["" :description ar/org-transient-title
+
+     ["Basic"
+      ("a" "ascii" (lambda () (interactive) (ar/org-template-expand "<a")))
+      ("c" "center" (lambda () (interactive) (ar/org-template-expand "<c")))
+      ("C" "comment" (lambda () (interactive) (ar/org-template-expand "<C")))
+      ("x" "example" (lambda () (interactive) (ar/org-template-expand "<e")))
+      ("E" "export" (lambda () (interactive) (ar/org-template-expand "<E")))
+      ("h" "html" (lambda () (interactive) (ar/org-template-expand "<h")))
+      ("l" "latex" (lambda () (interactive) (ar/org-template-expand "<l")))
+      ("n" "note" (lambda () (interactive) (ar/org-template-expand "<n")))
+      ("o" "quote" (lambda () (interactive) (ar/org-template-expand "<q")))
+      ("v" "verse" (lambda () (interactive) (ar/org-template-expand "<v")))]
+
+     ["Head"
+      ("i" "index" (lambda () (interactive) (ar/org-template-expand "<i")))
+      ("A" "ASCII" (lambda () (interactive) (ar/org-template-expand "<A")))
+      ("I" "INCLUDE" (lambda () (interactive) (ar/org-template-expand "<I")))
+      ("H" "HTML" (lambda () (interactive) (ar/org-template-expand "<H")))
+      ("L" "LaTeX" (lambda () (interactive) (ar/org-template-expand "<L")))]
+
+     ["Source"
+      ("s" "src" (lambda () (interactive) (ar/org-template-expand "<s")))
+      ("e" "emacs-lisp" (lambda () (interactive) (ar/org-template-expand "<s" "emacs-lisp")))
+      ("y" "python" (lambda () (interactive) (ar/org-template-expand "<s" "python")))
+      ("w" "powershell" (lambda () (interactive) (ar/org-template-expand "<s" "powershell")))
+      ("r" "ruby" (lambda () (interactive) (ar/org-template-expand "<s" "ruby")))
+      ("S" "sh" (lambda () (interactive) (ar/org-template-expand "<s" "sh")))
+      ("g" "golang" (lambda () (interactive) (ar/org-template-expand "<s" "go :imports '(\"fmt\")")))]
+
+     ["Misc"
+      ("m" "mermaid" (lambda () (interactive) (ar/org-template-expand "<s" "mermaid :file chart.png")))
+      ("u" "plantuml" (lambda () (interactive) (ar/org-template-expand "<s" "plantuml :file chart.png")))
+      ("Y" "ipython" ar/org-insert-ipython)
+      ("P" "Perl tangled" ar/org-insert-perl-tangled)
+      ("q" "Quit" transient-quit-one)
+      ("<" "insert <" self-insert-command)]])
+
+  ;; Bind '<' to trigger the menu contextually
+  (define-key org-mode-map (kbd "<")
+              (lambda ()
+                (interactive)
+                (if (or (region-active-p) (looking-back "^[ \t]*" 1))
+                    (ar/org-template-transient)
+                  (self-insert-command 1)))))
+#+end_src
+
+** Org Tab in Src Blocks
+#+begin_src emacs-lisp
+(with-eval-after-load 'evil-org
+  (remove-hook 'org-tab-first-hook #'+org-cycle-only-current-subtree-h))
+#+end_src
+
 * Development Tools
 ** Jupyter
 #+begin_src emacs-lisp
-;; (after! ob-jupyter
-;;   ;; Default header arguments for jupyter-python blocks
-;;   (setq org-babel-default-header-args:jupyter-python
-;;         '((:async . "yes")
-;;           (:session . "py")
-;;           (:kernel . "python3")
-;;           (:exports . "both")
-;;           (:results . "output")))
+(after! org
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((python . t)
+     (jupyter . t))))
 
-;;   ;; Override python blocks with jupyter AFTER ob-jupyter loads
-;;   ;; This lets you use #+begin_src python instead of jupyter-python
-;;   (org-babel-jupyter-override-src-block "python")
+(after! ob-jupyter
+  ;; Default header arguments for jupyter-python blocks
+  (setq org-babel-default-header-args:jupyter-python
+        '((:async . "yes")
+          (:session . "py")
+          (:kernel . "python3")
+          (:exports . "both")
+          (:results . "output")))
 
-;;   ;; Resource directory for images and other outputs
-;;   (setq org-babel-jupyter-resource-directory
-;;         (expand-file-name ".jupyter-resources/" org-directory))
+  ;; Override python blocks with jupyter AFTER ob-jupyter loads
+  ;; This lets you use #+begin_src python instead of jupyter-python
+  (org-babel-jupyter-override-src-block "python")
 
-;;   ;; Pandoc integration for richer output rendering
-;;   (when (executable-find "pandoc")
-;;     (setq jupyter-org-pandoc-convertable
-;;           '("text/html" "text/markdown" "text/latex"))))
+  (org-babel-jupyter-aliases-from-kernelspecs)
 
-;; ;; Ensure jupyter is properly loaded when executing python blocks
-;; (add-hook! '+org-babel-load-functions
-;;   (defun +jupyter-load-and-override-h (lang)
-;;     "Load jupyter for python and apply overrides."
-;;     (when (eq lang 'python)
-;;       (require 'ob-jupyter nil t)
-;;       (when (featurep 'ob-jupyter)
-;;         (org-babel-jupyter-make-local-aliases)
-;;         (org-babel-jupyter-override-src-block "python")))))
+  ;; Resource directory for images and other outputs
+  (setq org-babel-jupyter-resource-directory
+        (expand-file-name ".jupyter-resources/" org-directory))
+
+  ;; Pandoc integration for richer output rendering
+  (when (executable-find "pandoc")
+    (setq jupyter-org-pandoc-convertable
+          '("text/html" "text/markdown" "text/latex"))))
+
+;; Ensure jupyter is properly loaded when executing python blocks
+(after! org
+  (when (fboundp '+org-babel-load-jupyter-h)
+    (+org-babel-load-jupyter-h 'jupyter-python))
+  (org-babel-jupyter-override-src-block "python"))
 #+end_src
 
 ** Version Control
@@ -656,9 +758,7 @@
 
 * LaTeX
 ** Engine and Compilation Setup
-Configure latexmk as the build system with LuaLaTeX as the modern default engine.
-Doom's latex module (+cdlatex +fold) already provides AUCTeX, CDLaTeX, folding support,
-and SyncTeX integration. We extend it with latexmk for robust multi-pass compilation.
+Configure latexmk as the build system with LuaLaTeX as the modern default engine. Doom's latex module (+cdlatex +fold) already provides AUCTeX, CDLaTeX, folding support, and SyncTeX integration. We extend it with latexmk for robust multi-pass compilation.
 
 #+begin_src emacs-lisp
 (after! tex
@@ -792,20 +892,6 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
        :desc "Toggle fragtog" "f" #'org-fragtog-mode))
 #+end_src
 
-* Nix
-#+begin_src emacs-lisp
-(use-package! lsp-nix
-  :after (lsp-mode)
-  :custom
-  (lsp-nix-nil-formatter ["alejandra"]))
-
-(use-package! nix-mode
-  :hook (nix-mode . lsp-deferred))
-
-(use-package! nix-ts-mode
- :mode "\\.nix\\'")
-#+end_src
-
 * PDF Tools
 #+begin_src emacs-lisp
 (setq-default pdf-view-display-size 'fit-page)
@@ -829,87 +915,4 @@ and SyncTeX integration. We extend it with latexmk for robust multi-pass compila
           (suffix . " ${=type=:12} ${tags keywords:*}")
           (preview . "${author editor:%etal} (${year issued date}) ${title}, ${journal journaltitle publisher container-title collection-title}.\n")
           (note . "Notes on ${author editor:%etal}, ${title}"))))
-#+end_src
-
-* Keybindings
-#+begin_src emacs-lisp
-;; (map! :leader
-;;       (:prefix ("t" . "toggle")
-;;        :desc "Toggle eshell split"            "e" #'+eshell/toggle
-;;        :desc "Toggle line highlight in frame" "h" #'hl-line-mode
-;;        :desc "Toggle line highlight globally" "H" #'global-hl-line-mode
-;;        :desc "Toggle line numbers"            "l" #'doom/toggle-line-numbers
-;;        :desc "Toggle markdown-view-mode"      "m" #'dt/toggle-markdown-view-mode
-;;        :desc "Toggle truncate lines"          "t" #'toggle-truncate-lines
-;;        :desc "Toggle treemacs"                "T" #'+treemacs/toggle
-;;        :desc "Toggle vterm split"             "v" #'+vterm/toggle))
-
-;; (map! :leader
-;;       (:prefix ("o" . "open here")
-;;        :desc "Open eshell here"    "e" #'+eshell/here
-;;        :desc "Open vterm here"     "v" #'+vterm/here))
-
-;; (map! :leader
-;;       :desc "M-x" "SPC" #'execute-extended-command)
-
-;; (map! :leader
-;;       (:prefix ("j" . "jupyter")
-;;        :desc "Refresh kernelspecs"     "r" #'jupyter-refresh-kernelspecs
-;;        :desc "Toggle raw output"       "o" (cmd! (setq +jupyter-raw-output-mode
-;;                                                        (not +jupyter-raw-output-mode))
-;;                                                  (message "Jupyter raw output: %s"
-;;                                                           (if +jupyter-raw-output-mode "ON" "OFF")))))
-
-;; (map! :leader
-;;       (:prefix ("o" . "open")
-;;         :desc "Insert template"         "t" #'+org-insert-scientific-template
-;;         :desc "Toggle Python export"    "e" #'+org-toggle-python-export
-;;         :desc "Set tangle file"         "f" #'+org-set-python-tangle-file
-;;         :desc "Set subtree export"      "x" #'+org-set-subtree-export
-;;         :desc "Insert source block"     "s" #'+org-insert-src-block))
-
-;; (map! :leader
-;;       (:prefix ("c" . "code")
-;;        :desc "Format buffer"            "=" #'apheleia-format-buffer
-;;        :desc "Organize imports"         "o" #'eglot-code-action-organize-imports
-;;        :desc "Rename"                   "r" #'eglot-rename
-;;        :desc "Find references"          "R" #'xref-find-references
-;;        :desc "Show documentation"       "h" #'eldoc-doc-buffer
-;;        :desc "Show doc in childframe"   "H" #'eldoc-box-help-at-point
-;;        :desc "Code actions"             "a" #'eglot-code-actions
-;;        :desc "Find definition"          "d" #'xref-find-definitions
-;;        :desc "Find type definition"     "D" #'eglot-find-typeDefinition
-;;        :desc "Go back"                  "b" #'xref-go-back))
-
-;; (map! :leader
-;;       (:prefix ("d" . "debug/dape")
-;;        :desc "Debug"               "d" #'dape
-;;        :desc "Toggle breakpoint"   "b" #'dape-breakpoint-toggle
-;;        :desc "Continue"            "c" #'dape-continue
-;;        :desc "Next"                "n" #'dape-next
-;;        :desc "Step in"             "i" #'dape-step-in
-;;        :desc "Step out"            "o" #'dape-step-out
-;;        :desc "Restart"             "r" #'dape-restart
-;;        :desc "Kill debug session"  "k" #'dape-kill
-;;        :desc "Debug REPL"          "R" #'dape-repl))
-#+end_src
-
-* Projectile
-#+begin_src emacs-lisp
-(after! projectile
-  ;; Ensure clean project root detection
-  (setq projectile-project-root-files-bottom-up
-        '(".projectile" ".git"))
-
-  ;; Use alien indexing for better performance and reliability
-  (setq projectile-indexing-method 'alien)
-
-  ;; Ensure proper file finding
-  (setq projectile-enable-caching t)
-
-  ;; Fix potential path doubling issues
-  (advice-add 'projectile-find-file :around
-              (lambda (orig-fun &rest args)
-                (let ((default-directory (projectile-project-root)))
-                  (apply orig-fun args)))))
 #+end_src
