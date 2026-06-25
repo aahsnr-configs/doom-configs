@@ -143,16 +143,6 @@
              doom-dashboard-mode-hook)
            #'(lambda () (display-line-numbers-mode -1)))
 
-;; ALTERNATE CODE
-;; (remove-hook! '(text-mode-hook org-mode-hook) #'display-line-numbers-mode)
-
-;; (add-hook! (prog-mode
-;;             conf-mode
-;;             toml-ts-mode
-;;             yaml-mode
-;;             yaml-ts-mode)
-;;   #'display-line-numbers-mode)
-
 (setq doom-font (font-spec :family "JetBrains Mono" :size 13.0 :weight 'medium)
       doom-variable-pitch-font (font-spec :family "JetBrains Mono" :size 13.0)
       doom-big-font (font-spec :family "JetBrains Mono" :size 24))
@@ -304,8 +294,7 @@ and comments, and only inside src blocks."
   (setq dtrt-indent-min-quality 100)
   (setq dtrt-indent-mode-exclude-list '(org-mode)))
 
-(use-package! sudo-edit
-  :commands sudo-edit)
+(use-package! sudo-edit :commands sudo-edit)
 
 (setq resize-mini-windows t)
 (set-popup-rule! "^ \\*transient*" :ignore t)
@@ -393,17 +382,17 @@ and comments, and only inside src blocks."
                                 ("mp4" . "mpv"))))
 
 (after! vertico
-  (setq vertico-count 12))
+  (setq vertico-count 10))
 
-(after! projectile
-  (setq projectile-project-root-files-bottom-up
-        '(".projectile" ".git"))
-  (setq projectile-indexing-method 'alien)
-  (setq projectile-enable-caching t)
-  (advice-add 'projectile-find-file :around
-              (lambda (orig-fun &rest args)
-                (let ((default-directory (projectile-project-root)))
-                  (apply orig-fun args)))))
+;; (after! projectile
+;;   (setq projectile-project-root-files-bottom-up
+;;         '(".projectile" ".git"))
+;;   (setq projectile-indexing-method 'alien)
+;;   (setq projectile-enable-caching t)
+;;   (advice-add 'projectile-find-file :around
+;;               (lambda (orig-fun &rest args)
+;;                 (let ((default-directory (projectile-project-root)))
+;;                   (apply orig-fun args)))))
 
 (defvar my/org-directory "~/org/" "The root directory for Org files.")
 (defvar my/org-roam-directory (expand-file-name "roam/" my/org-directory) "The directory for Org Roam files.")
@@ -596,12 +585,6 @@ and comments, and only inside src blocks."
 (with-eval-after-load 'evil-org
   (remove-hook 'org-tab-first-hook #'+org-cycle-only-current-subtree-h))
 
-(after! org
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '((python . t)
-     (jupyter . t))))
-
 (after! ob-jupyter
   ;; Default header arguments for jupyter-python blocks
   (setq org-babel-default-header-args:jupyter-python
@@ -610,12 +593,6 @@ and comments, and only inside src blocks."
           (:kernel . "python3")
           (:exports . "both")
           (:results . "output")))
-
-  ;; Override python blocks with jupyter AFTER ob-jupyter loads
-  ;; This lets you use #+begin_src python instead of jupyter-python
-  (org-babel-jupyter-override-src-block "python")
-
-  (org-babel-jupyter-aliases-from-kernelspecs)
 
   ;; Resource directory for images and other outputs
   (setq org-babel-jupyter-resource-directory

@@ -75,7 +75,7 @@
        eshell              ; the elisp shell that works everywhere
        ;;shell             ; simple shell REPL for Emacs
        ;;term              ; basic terminal emulator for Emacs
-       ;;vterm
+       vterm
 
        :checkers
        (syntax +flymake +icons)
@@ -153,6 +153,7 @@
         +dragndrop
         +gnuplot
         +jupyter
+        +roam2
         +noter
         +pandoc
         +pretty)
@@ -175,7 +176,7 @@
        ;;solidity          ; do you need a blockchain? No.
        ;;swift             ; who asked for emoji variables?
        ;;terra             ; Earth and Moon in alignment for performance.
-       ;;web               ; the tubes
+       (web +lsp +tree-sitter)               ; the tubes
        (yaml +lsp +tree-sitter)
        ;;zig               ; C, but simpler
 

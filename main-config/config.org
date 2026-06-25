@@ -75,7 +75,6 @@
 
 (when (display-graphic-p)
   (setq x-select-request-type '(UTF8_STRING COMPOUND_TEXT TEXT STRING)))
-
 #+end_src
 
 * UI and Theming
@@ -168,16 +167,6 @@
              help-mode-hook
              doom-dashboard-mode-hook)
            #'(lambda () (display-line-numbers-mode -1)))
-
-;; ALTERNATE CODE
-;; (remove-hook! '(text-mode-hook org-mode-hook) #'display-line-numbers-mode)
-
-;; (add-hook! (prog-mode
-;;             conf-mode
-;;             toml-ts-mode
-;;             yaml-mode
-;;             yaml-ts-mode)
-;;   #'display-line-numbers-mode)
 #+end_src
 
 ** Fonts
@@ -352,8 +341,7 @@ and comments, and only inside src blocks."
 
 ** Sudo Edit
 #+begin_src emacs-lisp
-(use-package! sudo-edit
-  :commands sudo-edit)
+(use-package! sudo-edit :commands sudo-edit)
 #+end_src
 
 ** Transient
@@ -459,20 +447,20 @@ and comments, and only inside src blocks."
 ** Vertico
 #+begin_src emacs-lisp
 (after! vertico
-  (setq vertico-count 12))
+  (setq vertico-count 10))
 #+end_src
 
 ** Projectile
 #+begin_src emacs-lisp
-(after! projectile
-  (setq projectile-project-root-files-bottom-up
-        '(".projectile" ".git"))
-  (setq projectile-indexing-method 'alien)
-  (setq projectile-enable-caching t)
-  (advice-add 'projectile-find-file :around
-              (lambda (orig-fun &rest args)
-                (let ((default-directory (projectile-project-root)))
-                  (apply orig-fun args)))))
+;; (after! projectile
+;;   (setq projectile-project-root-files-bottom-up
+;;         '(".projectile" ".git"))
+;;   (setq projectile-indexing-method 'alien)
+;;   (setq projectile-enable-caching t)
+;;   (advice-add 'projectile-find-file :around
+;;               (lambda (orig-fun &rest args)
+;;                 (let ((default-directory (projectile-project-root)))
+;;                   (apply orig-fun args)))))
 #+end_src
 
 * Org
@@ -689,14 +677,9 @@ and comments, and only inside src blocks."
 #+end_src
 
 * Development Tools
-** Jupyter
-#+begin_src emacs-lisp
-(after! org
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '((python . t)
-     (jupyter . t))))
+** TODO Jupyter
 
+#+begin_src emacs-lisp
 (after! ob-jupyter
   ;; Default header arguments for jupyter-python blocks
   (setq org-babel-default-header-args:jupyter-python
@@ -705,12 +688,6 @@ and comments, and only inside src blocks."
           (:kernel . "python3")
           (:exports . "both")
           (:results . "output")))
-
-  ;; Override python blocks with jupyter AFTER ob-jupyter loads
-  ;; This lets you use #+begin_src python instead of jupyter-python
-  (org-babel-jupyter-override-src-block "python")
-
-  (org-babel-jupyter-aliases-from-kernelspecs)
 
   ;; Resource directory for images and other outputs
   (setq org-babel-jupyter-resource-directory
