@@ -30,7 +30,7 @@
        (emoji +unicode)
        hl-todo
        indent-guides
-       (ligatures +extra)
+       ligatures
        ;;minimap            ; show a map of the code on the side
        modeline             ; snazzy, Atom-inspired modeline, plus API
        ;;nav-flash          ; blink cursor line after big motions
@@ -72,10 +72,10 @@
        vc                  ; version-control and Emacs, sitting in a tree
 
        :term
-       eshell              ; the elisp shell that works everywhere
+       ;;eshell              ; the elisp shell that works everywhere
        ;;shell             ; simple shell REPL for Emacs
-       ;;term              ; basic terminal emulator for Emacs
-       vterm
+       term              ; basic terminal emulator for Emacs
+       ;;vterm
 
        :checkers
        (syntax +flymake +icons)
@@ -89,7 +89,7 @@
        debugger          ; FIXME stepping through code, to help you add bugs
        direnv
        ;;editorconfig      ; let someone else argue about tabs vs spaces
-       ;;ein               ; tame Jupyter notebooks with emacs
+       ein               ; tame Jupyter notebooks with emacs
        (eval +overlay)     ; run code, run (also, repls)
        lookup              ; navigate your code and its documentation
        llm               ; when I said you needed friends, I didn't mean...
@@ -153,7 +153,7 @@
         +dragndrop
         +gnuplot
         +jupyter
-        +roam2
+        +roam
         +noter
         +pandoc
         +pretty)
@@ -181,12 +181,12 @@
        ;;zig               ; C, but simpler
 
        :email
-       ;;(mu4e +org +gmail)
+       (mu4e +org +gmail)
        ;;notmuch
        ;;(wanderlust +gmail)
 
        :app
-       ;;calendar
+       calendar
        ;;emms
        ;;everywhere        ; *leave* Emacs!? You must be joking
        ;;irc               ; how neckbeards socialize
@@ -194,4 +194,4 @@
 
        :config
        literate
-       (default +bindings +smartparens))
+       (default +bindings))

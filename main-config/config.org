@@ -17,7 +17,7 @@
 #+begin_src emacs-lisp
 (global-so-long-mode 1)
 (size-indication-mode -1)
-(global-prettify-symbols-mode 1)
+;;(global-prettify-symbols-mode 1)
 
 (after! evil
   (setq evil-want-fine-undo t
@@ -463,6 +463,17 @@ and comments, and only inside src blocks."
 ;;                   (apply orig-fun args)))))
 #+end_src
 
+** Word Wrap
+#+begin_src emacs-lisp
+(+global-word-wrap-mode +1)
+#+end_src
+
+** Term
+#+begin_src emacs-lisp
+(after! multi-term
+  (setq multi-term-dedicated-window-height 20))
+#+end_src
+
 * Org
 ** Org Mode
 #+begin_src emacs-lisp
@@ -677,7 +688,7 @@ and comments, and only inside src blocks."
 #+end_src
 
 * Development Tools
-** TODO Jupyter
+** Jupyter
 
 #+begin_src emacs-lisp
 (after! ob-jupyter

@@ -4,7 +4,7 @@
 ;; Author: Ahsanur Rahman
 ;; Keywords: tools, languages, extensions, lsp
 ;; Package-Requires: ((emacs "30.1") (org "9.6"))
-;; Version: 0.9.3
+;; Version: 0.9.4
 
 ;;; Commentary:
 ;; This package injects surrounding source blocks into the `org-edit-special'
@@ -40,6 +40,9 @@
 ;;
 ;; 4. Safe Exit (Data Integrity):
 ;;    We attach cleanup hooks to both `org-edit-src-exit` (Save) and `abort`.
+;;    Each deletion step is guarded independently so a failure in one step
+;;    does not silently prevent the remaining steps from running.  A final
+;;    property-based scan removes any context text that slipped through.
 ;;    This ensures the injected "ghost text" is deleted before Org writes the
 ;;    buffer content back to the main Org file, preventing code duplication.
 ;;
@@ -47,6 +50,18 @@
 ;;    LSP servers (like Pyright) require valid file extensions to activate.
 ;;    We map the Org language (e.g., "python") to its extension (".py").
 ;;    Crucially, we EXCLUDE Emacs Lisp from Eglot activation to prevent conflicts.
+;;
+;; 6. On-Disk Mock File:
+;;    `org-src-context--setup-lsp' writes the user's code to the mock file path
+;;    so external formatters (e.g., apheleia via diff) have a real file to
+;;    reference.  `write-contents-functions' keeps it in sync on :w, and
+;;    `org-src-context--cleanup' deletes it when the edit session ends.
+;;
+;; 7. Evil :wq Integration:
+;;    Evil's :wq calls `save-buffer' then `kill-buffer'.  Killing the edit
+;;    buffer outside of `org-edit-src-exit' triggers Org's abort hook, silently
+;;    discarding edits.  We advise `evil-save-and-close' to route :wq to
+;;    `org-edit-src-exit' when inside an org-src edit buffer.
 
 ;;; Code:
 
@@ -84,6 +99,13 @@ editor freeze (lag) during the context collection phase."
 ;; TAIL marker: Placed at the start of the injected footer (Context Below).
 (defvar-local org-src-context--head-marker nil)
 (defvar-local org-src-context--tail-marker nil)
+
+(defvar-local org-src-context--mock-file nil
+  "Absolute path of the on-disk mock file created for formatter support.
+Created by `org-src-context--setup-lsp', deleted by `org-src-context--cleanup'.
+External formatters (e.g., apheleia via diff) require a real file at
+`buffer-file-name' to use as a reference; this variable tracks it so
+cleanup can remove it when the edit session ends.")
 
 ;;; --- Core Logic: Context Collection ---
 
@@ -200,7 +222,11 @@ This function handles the delicate text properties required to prevent
       ;; 2. INJECT FOOTER (Next blocks)
       (goto-char (point-max))
       (let ((start (point)))
-        (unless (bolp) (insert "\n")) ;; Ensure newline before footer
+        ;; FIX: Only insert the separator newline when there is actually a footer
+        ;; to inject.  The previous unconditional `unless bolp' insert would
+        ;; mark a trailing newline as `org-src-context-block' even when
+        ;; next-blocks is nil, creating a phantom footer region.
+        (when next-blocks (unless (bolp) (insert "\n"))) ;; Separator only if footer exists
         (dolist (b next-blocks)
           (insert (org-src-context--format-block b)))
 
@@ -238,6 +264,18 @@ This function handles the delicate text properties required to prevent
 
 ;;; --- Core Logic: LSP Mocking ---
 
+(defun org-src-context--update-mock-file ()
+  "Write the current (narrowed) buffer content to the on-disk mock file.
+Used as a `write-contents-functions' hook to intercept `save-buffer' calls
+in org-src edit buffers.  Returning non-nil tells Emacs the write is handled,
+preventing a direct write to `buffer-file-name' and keeping the file in sync
+with the narrowed user code so external formatters (e.g., apheleia) have a
+valid reference to diff against."
+  (when (and (org-src-edit-buffer-p) org-src-context--mock-file)
+    (write-region (point-min) (point-max)
+                  org-src-context--mock-file nil 'quiet)
+    t))
+
 (defun org-src-context--setup-lsp (info original-dir original-file)
   "Configure buffer-local variables so Eglot can find the root.
 Since org-src buffers are temporary and not file-backed, Eglot normally
@@ -274,6 +312,17 @@ or Language extension."
     ;; This allows Eglot to walk up the directory tree to find .git or project.toml.
     (setq-local buffer-file-name (expand-file-name mock-name original-dir))
 
+    ;; Write the current (narrowed) buffer content to disk so external formatters
+    ;; (e.g., apheleia's diff step) have a real file at buffer-file-name to reference.
+    ;; Only the user's code (the narrowed region) is written, not the injected context.
+    (write-region (point-min) (point-max) (buffer-file-name) nil 'quiet)
+    (setq-local org-src-context--mock-file (buffer-file-name))
+
+    ;; Intercept save-buffer calls so :w keeps the mock file in sync with the
+    ;; user's current code without bypassing Org's write-back mechanism.
+    ;; Returning non-nil from this hook tells Emacs the write is handled.
+    (add-hook 'write-contents-functions #'org-src-context--update-mock-file nil t)
+
     ;; Trigger Eglot initialization now that the "file" appears valid.
     ;; FIX: We EXCLUDE Emacs Lisp buffers. Elisp has native support and
     ;; forcing Eglot often causes errors or unnecessary server prompts.
@@ -307,8 +356,8 @@ This is the entry point for the package.
   ;; ROBUSTNESS CHECK 1: Ignore transient calls (CODE arg present)
   ;; ROBUSTNESS CHECK 2: Command Whitelist (Only allow user-initiated edits)
   (if (or (car args)
-          (not (memq this-command '(org-edit-special 
-                                    org-edit-src-code 
+          (not (memq this-command '(org-edit-special
+                                    org-edit-src-code
                                     evil-org-edit-src-code))))
       (apply orig-fn args)
 
@@ -330,7 +379,11 @@ This is the entry point for the package.
           (apply orig-fn args)
 
           ;; 3. We are now in the Edit Buffer. Inject!
-          (when context-blocks
+          ;; FIX: Only inject (and narrow) when surrounding blocks actually exist.
+          ;; `context-blocks' is always a cons cell from the collector, so
+          ;; `(when context-blocks ...)' is always truthy even with nil . nil.
+          ;; Check the car and cdr directly instead.
+          (when (or (car context-blocks) (cdr context-blocks))
             (org-src-context--inject (car context-blocks) (cdr context-blocks)))
 
           ;; 4. Setup LSP Mocking
@@ -340,20 +393,72 @@ This is the entry point for the package.
   "Clean up narrowing and markers before exiting or aborting.
 This is CRITICAL: We must remove injected text before Org saves the buffer
 back to the main Org file. If we don't, the injected context will be
-pasted into your source block, duplicating code."
+pasted into your source block, duplicating code.
+
+Each deletion step is guarded independently so a failure in one step
+does not silently prevent the remaining steps from running.  A final
+property-based scan removes any context text that slipped through."
   (let ((inhibit-read-only t)
         (inhibit-modification-hooks t))
-    (ignore-errors
-      (widen)
-      ;; Delete the header region
-      (when (and org-src-context--head-marker (marker-buffer org-src-context--head-marker))
-        (delete-region (point-min) org-src-context--head-marker)
-        (set-marker org-src-context--head-marker nil))
 
-      ;; Delete the footer region
-      (when (and org-src-context--tail-marker (marker-buffer org-src-context--tail-marker))
-        (delete-region org-src-context--tail-marker (point-max))
-        (set-marker org-src-context--tail-marker nil)))))
+    ;; Widen to expose the full buffer (injected context lives outside the
+    ;; narrowed region, so we must widen before deleting it).
+    (ignore-errors (widen))
+
+    ;; Delete the header region (previous context blocks).
+    ;; Each step has its own ignore-errors so a failure here does not
+    ;; prevent the footer or fallback steps from running.
+    (when (and org-src-context--head-marker
+               (markerp org-src-context--head-marker)
+               (marker-buffer org-src-context--head-marker))
+      (ignore-errors
+        (delete-region (point-min) org-src-context--head-marker))
+      (set-marker org-src-context--head-marker nil)
+      (setq-local org-src-context--head-marker nil))
+
+    ;; Delete the footer region (next context blocks).
+    (when (and org-src-context--tail-marker
+               (markerp org-src-context--tail-marker)
+               (marker-buffer org-src-context--tail-marker))
+      (ignore-errors
+        (delete-region org-src-context--tail-marker (point-max)))
+      (set-marker org-src-context--tail-marker nil)
+      (setq-local org-src-context--tail-marker nil))
+
+    ;; Fallback: scan for any remaining injected text by text property and
+    ;; delete it.  This catches edge cases where the marker-based deletion
+    ;; above failed silently (e.g., due to a text-property conflict causing
+    ;; ignore-errors to swallow the error before set-marker nil ran).
+    (let ((pos (point-min)))
+      (while (and (< pos (point-max))
+                  (setq pos (text-property-any pos (point-max)
+                                               'org-src-context-block t)))
+        (let ((end (or (text-property-not-all pos (point-max)
+                                              'org-src-context-block t)
+                       (point-max))))
+          (ignore-errors (delete-region pos end))
+          (setq pos (min pos (point-max))))))
+
+    ;; Remove the on-disk mock file now that the edit session is ending.
+    ;; This prevents stale files from accumulating in the project directory.
+    (when org-src-context--mock-file
+      (ignore-errors (delete-file org-src-context--mock-file))
+      (setq-local org-src-context--mock-file nil))))
+
+;;; --- Evil Integration ---
+
+(defun org-src-context--evil-wq (orig-fn &rest args)
+  "Redirect evil's `:wq' to `org-edit-src-exit' in org-src edit buffers.
+Without this, `:wq' calls `save-buffer' then `kill-buffer'.  Killing the
+edit buffer outside of `org-edit-src-exit' triggers Org's internal abort
+hook, silently discarding the user's edits instead of writing them back
+to the org source block.
+
+When not in an org-src edit buffer, the original function is called
+unchanged so normal evil :wq behaviour is preserved everywhere else."
+  (if (org-src-edit-buffer-p)
+      (org-edit-src-exit)
+    (apply orig-fn args)))
 
 ;;;###autoload
 (define-minor-mode org-src-context-mode
@@ -363,7 +468,9 @@ pasted into your source block, duplicating code."
 
 When enabled:
 1. Advise `org-edit-src-code` to inject context and setup LSP.
-2. Advise `org-edit-src-exit` and `abort` to cleanup injected context."
+2. Advise `org-edit-src-exit` and `abort` to cleanup injected context.
+3. Advise `evil-save-and-close' (if present) to route :wq to
+   `org-edit-src-exit' rather than kill-buffer, preserving edits."
   :global t
   :group 'org-src-context
   (if org-src-context-mode
@@ -372,11 +479,17 @@ When enabled:
         (advice-add 'org-edit-src-code :around #'org-src-context--advice)
         ;; Add safety cleanup hooks on both exit paths (Save or Abort)
         (advice-add 'org-edit-src-exit :before #'org-src-context--cleanup)
-        (advice-add 'org-edit-src-abort :before #'org-src-context--cleanup))
+        (advice-add 'org-edit-src-abort :before #'org-src-context--cleanup)
+        ;; Route evil's :wq to org-edit-src-exit so edits are saved back to
+        ;; the org buffer rather than being discarded by the abort kill-buffer hook.
+        (when (fboundp 'evil-save-and-close)
+          (advice-add 'evil-save-and-close :around #'org-src-context--evil-wq)))
     ;; Remove everything on disable
     (advice-remove 'org-edit-src-code #'org-src-context--advice)
     (advice-remove 'org-edit-src-exit #'org-src-context--cleanup)
-    (advice-remove 'org-edit-src-abort #'org-src-context--cleanup)))
+    (advice-remove 'org-edit-src-abort #'org-src-context--cleanup)
+    (when (fboundp 'evil-save-and-close)
+      (advice-remove 'evil-save-and-close #'org-src-context--evil-wq))))
 
 (provide 'org-src-context)
 ;;; org-src-context.el ends here
