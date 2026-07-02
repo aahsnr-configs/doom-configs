@@ -68,4 +68,5 @@
 (package! dired-open)
 (package! org-fragtog)
 (package! magit-todos)
+(package! eldoc-box)
 (package! flymake-ruff)

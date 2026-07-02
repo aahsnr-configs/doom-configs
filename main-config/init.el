@@ -78,7 +78,7 @@
        ;;vterm
 
        :checkers
-       (syntax +flymake +icons)
+       (syntax +flymake)
        ;;(spell +flyspell) ; tasing you for misspelling mispelling
        ;;grammar           ; tasing grammar mistake every you make
 

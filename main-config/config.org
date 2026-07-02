@@ -425,11 +425,11 @@ and comments, and only inside src blocks."
                         (vertico-grid-annotate . 20)
                         (vertico-count . 4)))))
 
-  (map! :map jinx-mode-map
-        :n "zg" #'jinx-correct
-        :n "z=" #'jinx-correct
-        :n "[s" #'jinx-previous
-        :n "]s" #'jinx-next)
+(map! :map jinx-mode-map
+      :n "zg" #'jinx-correct
+      :n "z=" #'jinx-correct
+      :n "[s" #'jinx-previous
+      :n "]s" #'jinx-next)
 #+end_src
 
 ** Dired
@@ -474,6 +474,28 @@ and comments, and only inside src blocks."
 #+begin_src emacs-lisp
 (after! multi-term
   (setq multi-term-dedicated-window-height 8))
+#+end_src
+
+** Diagnostic Display
+#+begin_src emacs-lisp
+;; Route flymake diagnostics through eldoc-box instead of flymake's own
+;; hover popup (already disabled via flymake-popon :disable t) or the
+;; end-of-line summaries.
+(setq flymake-show-diagnostics-at-end-of-line nil)
+
+(use-package! eldoc-box
+  :hook (eglot-managed-mode . eldoc-box-hover-at-point-mode)
+  :config
+  (setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly)
+  (setf (alist-get 'internal-border-width eldoc-box-frame-parameters) 2))
+
+;; Straight underlines instead of squiggly/wave, keeping flymake's own
+;; default error/warning/note colors.
+(after! flymake
+  (custom-set-faces!
+   '(flymake-error   :underline (:style line :color "Red1"))
+   '(flymake-warning :underline (:style line :color "deep sky blue"))
+   '(flymake-note    :underline (:style line :color "yellow green"))))
 #+end_src
 
 * Org
@@ -743,6 +765,42 @@ and comments, and only inside src blocks."
 
 (setq +python-ipython-repl-args '("-i" "--simple-prompt" "--no-color-info"))
 (setq +python-jupyter-repl-args '("--simple-prompt"))
+
+(use-package! flymake-ruff
+ :init
+ (setq flymake-ruff-program-args
+       '("check" "--output-format" "concise" "--exit-zero" "--quiet"
+         ;; F821 (undefined-name) is a syntactic guess with no type
+         ;; inference; it false-positives on forward references,
+         ;; TYPE_CHECKING-only imports, and stub-only symbols.
+         ;; pyrefly resolves names correctly via real type analysis,
+         ;; so let pyrefly own that diagnostic class and keep ruff's
+         ;; flymake report scoped to lint/style/import hygiene.
+         "--ignore" "F821" "-"))
+  :hook (eglot-managed-mode . flymake-ruff-load))
+
+;; Pyrefly's LSP emits an editor-only "unused-import" note that isn't part
+;; of its configurable error-kind set (can't be turned off via
+;; pyrefly.toml), and it duplicates ruff's F401. Same situation
+;; flymake-ruff's README documents for Pyright's "variable not accessed"
+;; notes, with the same fix: filter it out of eglot's flymake report.
+;; Ruff keeps this one since it also auto-fixes it.
+(defun +eglot-drop-pyrefly-unused-import-a (diags)
+  "Drop Pyrefly's `unused-import' notes from DIAGS; ruff's F401 covers it."
+  (list (seq-remove
+         (lambda (d)
+           (string-prefix-p "Pyrefly [unused-import]:"
+                             (flymake-diagnostic-text d)))
+         (car diags))))
+(advice-add 'eglot--report-to-flymake :filter-args
+            #'+eglot-drop-pyrefly-unused-import-a)
+
+
+;; use a single indent and wrap at fill-column in json-mode
+(add-hook! 'python-mode-hook
+  (setq-local +word-wrap-extra-indent 'single
+              +word-wrap-fill-style 'soft)
+  (+word-wrap-mode +1))
 #+end_src
 
 * LaTeX
