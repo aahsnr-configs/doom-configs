@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily TODOs in Doom Emacs — A Complete Guide</title>
+<style>
+  /* ── Tokyo Night Palette ─────────────────────────── */
+  :root {
+    --bg:        #1a1b26;
+    --bg-alt:    #16161e;
+    --bg-popup:  #1f2335;
+    --bg-hl:     #292e42;
+    --border:    #29355a;
+    --fg:        #c0caf5;
+    --fg-dim:    #9399b2;
+    --comment:   #565f89;
+    --red:       #f7768e;
+    --orange:    #ff9e64;
+    --yellow:    #e0af68;
+    --green:     #9ece6a;
+    --teal:      #1abc9c;
+    --cyan:      #7dcfff;
+    --blue:      #7aa2f7;
+    --purple:    #9d7cd8;
+    --magenta:   #bb9af7;
+    --dark-blue: #3d59a1;
+    --keyword:   #2ac3de;
+    --gutter:    #24283b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* ── Layout ──────────────────────────────────────── */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ─────────────────────────────────────── */
+  .sidebar {
+    background: var(--bg-alt);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 2rem 0 4rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-logo {
+    padding: 0 1.5rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+
+  .sidebar-logo .logo-icon {
+    font-size: 1.8rem;
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .sidebar-logo h2 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--blue);
+  }
+
+  .sidebar-logo p {
+    font-size: 0.75rem;
+    color: var(--comment);
+    margin-top: 0.15rem;
+  }
+
+  .nav-group {
+    padding: 0 1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .nav-group-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--comment);
+    padding: 0 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .nav-group a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    color: var(--fg-dim);
+    text-decoration: none;
+    font-size: 0.83rem;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .nav-group a:hover {
+    background: var(--bg-hl);
+    color: var(--fg);
+  }
+
+  .nav-group a .nav-num {
+    font-size: 0.7rem;
+    background: var(--bg-hl);
+    color: var(--comment);
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+    min-width: 22px;
+    text-align: center;
+    font-family: monospace;
+  }
+
+  /* ── Main ────────────────────────────────────────── */
+  main {
+    padding: 3.5rem 4rem 6rem;
+    max-width: 900px;
+  }
+
+  /* ── Header ──────────────────────────────────────── */
+  .page-header {
+    margin-bottom: 3.5rem;
+  }
+
+  .page-header .tag-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--blue);
+    background: rgba(122,162,247,0.1);
+    border: 1px solid rgba(122,162,247,0.25);
+    border-radius: 20px;
+    padding: 0.3rem 0.8rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2.6rem;
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--fg);
+    margin-bottom: 0.8rem;
+  }
+
+  .page-header h1 span {
+    color: var(--blue);
+  }
+
+  .page-header .subtitle {
+    font-size: 1.05rem;
+    color: var(--fg-dim);
+    max-width: 680px;
+    line-height: 1.65;
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.4rem;
+    flex-wrap: wrap;
+  }
+
+  .meta-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--fg-dim);
+  }
+
+  .meta-badge .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Sections ────────────────────────────────────── */
+  section {
+    margin-bottom: 3.5rem;
+    scroll-margin-top: 2rem;
+  }
+
+  .section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--magenta);
+    margin-bottom: 0.5rem;
+  }
+
+  h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--fg);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--cyan);
+    margin-top: 2rem;
+    margin-bottom: 0.8rem;
+  }
+
+  p {
+    color: var(--fg-dim);
+    margin-bottom: 1rem;
+    max-width: 72ch;
+  }
+
+  strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  em { color: var(--yellow); font-style: italic; }
+
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    background: var(--gutter);
+    color: var(--cyan);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+  }
+
+  ul, ol {
+    padding-left: 1.6rem;
+    margin-bottom: 1rem;
+    color: var(--fg-dim);
+  }
+
+  li { margin-bottom: 0.4rem; }
+  li code { font-size: 0.82em; }
+
+  /* ── Keybinding Table ────────────────────────────── */
+  .kb-table-wrap {
+    margin: 1.4rem 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .kb-table-wrap .table-title {
+    background: var(--bg-popup);
+    padding: 0.7rem 1.1rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--comment);
+    border-bottom: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead tr {
+    background: var(--bg-popup);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--comment);
+  }
+
+  thead th {
+    padding: 0.65rem 1.1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(41,53,90,0.5);
+    transition: background 0.12s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg-hl); }
+
+  td {
+    padding: 0.7rem 1.1rem;
+    font-size: 0.88rem;
+    vertical-align: top;
+  }
+
+  td:first-child { width: 38%; }
+
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    flex-wrap: wrap;
+  }
+
+  .key {
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: var(--bg-alt);
+    color: var(--blue);
+    border: 1px solid var(--dark-blue);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 0.15em 0.5em;
+    white-space: nowrap;
+  }
+
+  .key.spc { color: var(--magenta); border-color: var(--purple); }
+  .key.meta { color: var(--orange); border-color: rgba(255,158,100,0.4); }
+  .key.ctrl { color: var(--green); border-color: rgba(158,206,106,0.4); }
+  .key.shift { color: var(--yellow); border-color: rgba(224,175,104,0.4); }
+  .key.seq { color: var(--cyan); border-color: rgba(125,207,255,0.4); }
+  .key.ret { color: var(--red); border-color: rgba(247,118,142,0.4); }
+
+  .key-sep { color: var(--comment); font-size: 0.75rem; }
+
+  td .desc { color: var(--fg-dim); }
+  td .note {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--comment);
+    margin-top: 0.2rem;
+  }
+
+  /* ── Callout boxes ───────────────────────────────── */
+  .callout {
+    border-radius: 10px;
+    padding: 1rem 1.3rem;
+    margin: 1.5rem 0;
+    border-left: 3px solid;
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  .callout-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+  .callout-body { flex: 1; }
+  .callout-body p { margin: 0; font-size: 0.88rem; max-width: none; }
+  .callout-body strong { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; }
+
+  .callout.tip {
+    background: rgba(158,206,106,0.07);
+    border-color: var(--green);
+  }
+  .callout.tip .callout-icon { color: var(--green); }
+  .callout.tip strong { color: var(--green); }
+
+  .callout.info {
+    background: rgba(122,162,247,0.07);
+    border-color: var(--blue);
+  }
+  .callout.info .callout-icon { color: var(--blue); }
+  .callout.info strong { color: var(--blue); }
+
+  .callout.warn {
+    background: rgba(224,175,104,0.07);
+    border-color: var(--yellow);
+  }
+  .callout.warn .callout-icon { color: var(--yellow); }
+  .callout.warn strong { color: var(--yellow); }
+
+  .callout.note {
+    background: rgba(187,154,247,0.07);
+    border-color: var(--magenta);
+  }
+  .callout.note .callout-icon { color: var(--magenta); }
+  .callout.note strong { color: var(--magenta); }
+
+  /* ── Code blocks ─────────────────────────────────── */
+  .code-block {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin: 1.2rem 0;
+  }
+
+  .code-block-header {
+    background: var(--bg-popup);
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-block-header .lang {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--comment);
+  }
+
+  .code-block-header .dots { display: flex; gap: 5px; }
+  .code-block-header .dots span {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+  }
+  .dot-r { background: var(--red); }
+  .dot-y { background: var(--yellow); }
+  .dot-g { background: var(--green); }
+
+  pre {
+    background: var(--bg-alt);
+    padding: 1.1rem 1.3rem;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    overflow-x: auto;
+    color: var(--fg);
+  }
+
+  /* Syntax colors in pre blocks */
+  .t-kw { color: var(--magenta); }
+  .t-fn { color: var(--blue); }
+  .t-str { color: var(--green); }
+  .t-comment { color: var(--comment); font-style: italic; }
+  .t-var { color: var(--orange); }
+  .t-lit { color: var(--cyan); }
+
+  /* ── Workflow steps ───────────────────────────────── */
+  .workflow {
+    display: grid;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .workflow-step {
+    display: flex;
+    gap: 1.2rem;
+    background: var(--bg-popup);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.3rem;
+    align-items: flex-start;
+  }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--dark-blue);
+    color: var(--blue);
+    font-size: 0.78rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-content { flex: 1; }
+
+  .step-content h4 {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--fg);
+    margin-bottom: 0.35rem;
+  }
+
+  .step-content p {
+    font-size: 0.85rem;
+    margin: 0;
+    color: var(--fg-dim);
+    max-width: none;
+  }
+
+  /* ── TODO state pills ─────────────────────────────── */
+  .todo-states {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin: 0.8rem 0 1.2rem;
+  }
+
+  .state-pill {
+    font-family: 'Cascadia Code', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 0.3em 0.75em;
+    letter-spacing: 0.05em;
+  }
+
+  .state-todo    { background: rgba(122,162,247,0.15); color: var(--blue); border: 1px solid rgba(122,162,247,0.3); }
+  .state-next    { background: rgba(158,206,106,0.12); color: var(--green); border: 1px solid rgba(158,206,106,0.3); }
+  .state-wait    { background: rgba(224,175,104,0.12); color: var(--yellow); border: 1px solid rgba(224,175,104,0.3); }
+  .state-hold    { background: rgba(255,158,100,0.12); color: var(--orange); border: 1px solid rgba(255,158,100,0.3); }
+  .state-done    { background: rgba(158,206,106,0.08); color: #6a9f3d; border: 1px solid rgba(158,206,106,0.2); }
+  .state-kill    { background: rgba(247,118,142,0.10); color: var(--red); border: 1px solid rgba(247,118,142,0.25); }
+  .state-proj    { background: rgba(187,154,247,0.10); color: var(--magenta); border: 1px solid rgba(187,154,247,0.25); }
+  .state-strt    { background: rgba(125,207,255,0.10); color: var(--cyan); border: 1px solid rgba(125,207,255,0.25); }
+
+  .state-arrow { color: var(--comment); align-self: center; }
+
+  /* ── Priority pills ───────────────────────────────── */
+  .prio-a { color: var(--red); font-weight: 700; font-family: monospace; }
+  .prio-b { color: var(--yellow); font-weight: 700; font-family: monospace; }
+  .prio-c { color: var(--blue); font-weight: 700; font-family: monospace; }
+
+  /* ── Divider ─────────────────────────────────────── */
+  hr.section-div {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 3rem 0;
+  }
+
+  /* ── Footer ──────────────────────────────────────── */
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+    color: var(--comment);
+  }
+
+  /* ── Responsive ──────────────────────────────────── */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: relative; height: auto; }
+    main { padding: 2rem 1.5rem 4rem; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar Navigation ───────────────────────── -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">🔥</span>
+      <h2>Doom Emacs</h2>
+      <p>Daily TODO Guide</p>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Getting Started</div>
+      <a href="#setup"><span class="nav-num">01</span> Setup &amp; Prerequisites</a>
+      <a href="#org-files"><span class="nav-num">02</span> Org Directory &amp; Files</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Creating TODOs</div>
+      <a href="#capture"><span class="nav-num">03</span> org-capture: Fast Capture</a>
+      <a href="#inline"><span class="nav-num">04</span> Inline Heading TODOs</a>
+      <a href="#todo-states"><span class="nav-num">05</span> TODO States &amp; Cycling</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Scheduling</div>
+      <a href="#scheduling"><span class="nav-num">06</span> Scheduling &amp; Deadlines</a>
+      <a href="#priorities"><span class="nav-num">07</span> Priorities &amp; Tags</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Review &amp; Tracking</div>
+      <a href="#agenda"><span class="nav-num">08</span> The Org Agenda</a>
+      <a href="#clocking"><span class="nav-num">09</span> Clocking Time</a>
+      <a href="#refiling"><span class="nav-num">10</span> Refiling Tasks</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Daily Practice</div>
+      <a href="#workflow"><span class="nav-num">11</span> Daily Workflow</a>
+      <a href="#cheatsheet"><span class="nav-num">12</span> Quick Cheat-Sheet</a>
+    </div>
+  </nav>
+
+  <!-- ── Main Content ──────────────────────────────── -->
+  <main>
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="tag-line">⚡ Doom Emacs · Evil Mode · org-mode</div>
+      <h1>Creating Daily <span>TODOs</span><br>in Doom Emacs</h1>
+      <p class="subtitle">
+        A practical guide to capturing tasks, managing states, scheduling work, and reviewing your day — all through Doom's default keybindings. No custom config required to follow along.
+      </p>
+      <div class="meta-row">
+        <div class="meta-badge"><span class="dot" style="background:var(--green)"></span> Updated June 2026</div>
+        <div class="meta-badge"><span class="dot" style="background:var(--blue)"></span> Evil / vim-style bindings</div>
+        <div class="meta-badge"><span class="dot" style="background:var(--magenta)"></span> Doom v21.12+ compatible</div>
+      </div>
+    </div>
+
+    <!-- ── Section 01: Setup ────────────────────────── -->
+    <section id="setup">
+      <div class="section-label">01 · Setup</div>
+      <h2>Setup &amp; Prerequisites</h2>
+
+      <p>
+        Doom Emacs ships the <strong>:lang org</strong> module — Org-mode's integration layer —
+        enabled by default in most fresh installs. Before anything else, confirm that the module
+        is active in your <code>~/.doom.d/init.el</code> (or <code>~/.config/doom/init.el</code>):
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="lang">init.el</span>
+          <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        </div>
+        <pre><span class="t-comment">;; Inside the :lang block — ensure org is present</span>
+:lang
+(<span class="t-kw">org</span>              <span class="t-comment">; minimum required</span>
+ <span class="t-comment">;; optional flags — add what suits you:</span>
+ +pretty          <span class="t-comment">; fancy bullets &amp; priorities</span>
+ +roam2           <span class="t-comment">; knowledge graph (requires sqlite3)</span>
+ +journal         <span class="t-comment">; org-journal integration</span>
+ +pomodoro)       <span class="t-comment">; built-in timer for tasks</span></pre>
+      </div>
+
+      <p>
+        After editing <code>init.el</code>, run <code>doom sync</code> in your terminal (or
+        <code>SPC h r r</code> inside Doom) to install any missing packages and regenerate the
+        autoloads file.
+      </p>
+
+      <div class="callout info">
+        <div class="callout-icon">ℹ</div>
+        <div class="callout-body">
+          <strong>Keybinding Notation</strong>
+          This guide uses evil (vim-style) keybindings — Doom's default mode. <code>SPC</code>
+          is the leader key. <code>SPC m</code> opens the local leader (major-mode commands). In
+          insert mode, substitute <code>SPC</code> with <code>M-SPC</code>. If you've disabled
+          evil, replace <code>SPC</code> with <code>C-c</code> and <code>SPC m</code> with
+          <code>C-c l</code>.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 02: Org Files ────────────────────── -->
+    <section id="org-files">
+      <div class="section-label">02 · Files</div>
+      <h2>Org Directory &amp; Files</h2>
+
+      <p>
+        Doom sets <code>org-directory</code> to <code>~/org/</code> by default. Every TODO you
+        capture lands in files within this directory. It is best practice to configure this
+        <em>before</em> org loads — i.e., at the very top of <code>~/.doom.d/config.el</code>:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="lang">config.el</span>
+          <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        </div>
+        <pre><span class="t-comment">;; Must be set BEFORE org loads</span>
+(<span class="t-kw">setq</span> <span class="t-var">org-directory</span> <span class="t-str">"~/org/"</span>)</pre>
+      </div>
+
+      <p>
+        Doom's built-in capture templates create three key files automatically inside your
+        <code>org-directory</code>:
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Doom Default Org Files</div>
+        <table>
+          <thead>
+            <tr><th>File</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>todo.org</code></td>
+              <td class="desc">Personal TODO items captured via <span class="kbd"><span class="key spc">SPC</span><span class="key">X</span><span class="key seq">t</span></span></td>
+            </tr>
+            <tr>
+              <td><code>notes.org</code></td>
+              <td class="desc">Freeform notes captured via <span class="kbd"><span class="key spc">SPC</span><span class="key">X</span><span class="key seq">n</span></span></td>
+            </tr>
+            <tr>
+              <td><code>journal.org</code></td>
+              <td class="desc">Date-tree journal entries captured via <span class="kbd"><span class="key spc">SPC</span><span class="key">X</span><span class="key seq">j</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        You can open any of these files directly with the Vim-style ex-command <code>:e todo.org</code>
+        or with <span class="kbd"><span class="key spc">SPC</span><span class="key seq">f</span><span class="key seq">f</span></span> and typing the filename — Doom resolves it relative to
+        <code>org-directory</code> automatically.
+      </p>
+
+      <div class="callout tip">
+        <div class="callout-icon">✦</div>
+        <div class="callout-body">
+          <strong>Add files to the agenda</strong>
+          For your TODO items to show up in the Org Agenda, the files must be listed in
+          <code>org-agenda-files</code>. Doom pre-populates this with your
+          <code>org-directory</code>, but you can extend it:
+          <br><br>
+          <code>(setq org-agenda-files (list org-directory "~/work/projects.org"))</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 03: Capture ──────────────────────── -->
+    <section id="capture">
+      <div class="section-label">03 · Capture</div>
+      <h2>org-capture: Fast TODO Capture</h2>
+
+      <p>
+        <strong>org-capture</strong> is the fastest way to add a TODO without losing your current
+        context. You invoke it from anywhere in Doom — even in the middle of writing code — and it
+        pops up a temporary buffer where you type your task. When you finish, the item is filed
+        automatically and you return exactly where you were.
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Capture Keybindings</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="kbd">
+                  <span class="key spc">SPC</span><span class="key">X</span>
+                </div>
+              </td>
+              <td class="desc">
+                Open the capture dispatcher menu
+                <span class="note">Lists all available templates — pick with a single key press.</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="kbd">
+                  <span class="key spc">SPC</span><span class="key">X</span> <span class="key seq">t</span>
+                </div>
+              </td>
+              <td class="desc">
+                Capture a personal <strong>Todo</strong> → <code>todo.org</code>
+                <span class="note">Creates a <code>* TODO</code> headline with timestamp.</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="kbd">
+                  <span class="key spc">SPC</span><span class="key">X</span> <span class="key seq">n</span>
+                </div>
+              </td>
+              <td class="desc">
+                Capture a personal <strong>Note</strong> → <code>notes.org</code>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="kbd">
+                  <span class="key spc">SPC</span><span class="key">X</span> <span class="key seq">j</span>
+                </div>
+              </td>
+              <td class="desc">
+                Capture a <strong>Journal</strong> entry → <code>journal.org</code>
+                <span class="note">Organized under a date-tree (Year → Month → Day).</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="kbd">
+                  <span class="key ctrl">C-c</span> <span class="key ctrl">C-c</span>
+                </div>
+              </td>
+              <td class="desc">
+                <strong>Confirm &amp; file</strong> the capture entry
+                <span class="note">Works in the capture buffer. Also aliased to <code>ZZ</code> in evil mode.</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="kbd">
+                  <span class="key ctrl">C-c</span> <span class="key ctrl">k</span>
+                </div>
+              </td>
+              <td class="desc">
+                <strong>Abort</strong> the capture without saving
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="kbd">
+                  <span class="key ctrl">C-c</span> <span class="key ctrl">w</span>
+                </div>
+              </td>
+              <td class="desc">
+                <strong>Refile</strong> the entry to a different location before confirming
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>What a captured TODO looks like</h3>
+
+      <p>
+        After pressing <span class="kbd"><span class="key spc">SPC</span><span class="key">X</span><span class="key seq">t</span></span>
+        and typing your task title, Doom writes the following structure to <code>todo.org</code>:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="lang">todo.org</span>
+          <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        </div>
+        <pre><span class="t-kw">* TODO</span> Review the pull request for feature/auth-refactor
+<span class="t-str">:PROPERTIES:</span>
+<span class="t-var">:ID:</span>       a1b2c3d4-...
+<span class="t-str">:END:</span>
+[2026-06-23 Tue 14:35]</pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">✦</div>
+        <div class="callout-body">
+          <strong>Capture from anywhere</strong>
+          You can invoke capture while browsing a file in Dired, inside a Magit diff, or mid-code-edit.
+          Doom's capture is <em>non-destructive</em> — it does not move your cursor, does not close
+          your current buffer, and restores your window layout after <code>C-c C-c</code>.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 04: Inline TODOs ─────────────────── -->
+    <section id="inline">
+      <div class="section-label">04 · Inline</div>
+      <h2>Writing TODO Headings Directly</h2>
+
+      <p>
+        Sometimes you'd rather be directly inside an org file building out a structured task list
+        instead of going through the capture dispatcher. Once you have an org buffer open
+        (<code>todo.org</code>, or any <code>*.org</code> file), these are the essential
+        editing keybindings.
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Heading &amp; TODO Creation</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-</span><span class="key ret">RET</span></span></td>
+              <td class="desc">
+                Insert a new heading at the same level below the current one
+                <span class="note">Most efficient way to add sibling TODO items quickly.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-</span><span class="key shift">S-</span><span class="key ret">RET</span></span></td>
+              <td class="desc">
+                Insert a new heading and immediately toggle it to <code>TODO</code> state
+                <span class="note">Creates a TODO sibling in one step — the classic fast-entry combo.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">t</span></span></td>
+              <td class="desc">
+                Toggle / cycle the TODO keyword on the current heading
+                <span class="note">On a non-TODO heading: sets it to TODO. On TODO: advances the state.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key shift">S-</span><span class="key">→</span></span></td>
+              <td class="desc">
+                Cycle TODO state <em>forward</em> (TODO → NEXT → DONE…)
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key shift">S-</span><span class="key">←</span></span></td>
+              <td class="desc">
+                Cycle TODO state <em>backward</em>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key meta">M-</span><span class="key shift">S-</span><span class="key ret">RET</span></span></td>
+              <td class="desc">
+                Insert a new TODO heading at the end of the current subtree
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">C-x</span> <span class="key seq">b</span></span></td>
+              <td class="desc">
+                Toggle checkbox (if cursor is on a checkbox item)
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">x</span></span></td>
+              <td class="desc">
+                Toggle org checkbox on the current line
+                <span class="note">Use <code>- [ ] task</code> syntax to create checkbox lists under headings.</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Promoting &amp; Demoting Headings</h3>
+      <p>
+        Organize your tasks into projects and sub-tasks by controlling heading levels:
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Heading Level Control</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key meta">M-</span><span class="key shift">S-</span><span class="key">→</span></span></td>
+              <td class="desc">Demote heading (indent one level deeper — makes it a child)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key meta">M-</span><span class="key shift">S-</span><span class="key">←</span></span></td>
+              <td class="desc">Promote heading (outdent — makes it a parent / sibling)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key meta">M-</span><span class="key">↑</span></span></td>
+              <td class="desc">Move the current subtree up past the previous sibling</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key meta">M-</span><span class="key">↓</span></span></td>
+              <td class="desc">Move the current subtree down past the next sibling</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">TAB</span></span></td>
+              <td class="desc">Cycle visibility of the current subtree (fold/unfold)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key shift">S-</span><span class="key">TAB</span></span></td>
+              <td class="desc">Cycle visibility of the <em>entire</em> buffer globally</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-icon">✎</div>
+        <div class="callout-body">
+          <strong>Checkboxes vs. TODO headings</strong>
+          Use checkboxes (<code>- [ ] step</code>) for sub-steps inside a single task. Use
+          TODO headings (<code>** TODO</code>) for discrete items that may need scheduling,
+          priorities, or their own due dates. Checkboxes live <em>inside</em> a heading's
+          body; they don't appear in the agenda.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 05: States ───────────────────────── -->
+    <section id="todo-states">
+      <div class="section-label">05 · States</div>
+      <h2>TODO States &amp; Cycling</h2>
+
+      <p>
+        Doom's default <code>org-todo-keywords</code> include a rich set of states split across two
+        sequences — active (un-done) and completed. Understanding the flow between states is central
+        to effective daily task management.
+      </p>
+
+      <h3>Default Doom TODO keyword sequences</h3>
+
+      <div class="todo-states">
+        <span class="state-pill state-todo">TODO</span>
+        <span class="state-arrow">→</span>
+        <span class="state-pill state-proj">PROJ</span>
+        <span class="state-arrow">→</span>
+        <span class="state-pill state-strt">STRT</span>
+        <span class="state-arrow">→</span>
+        <span class="state-pill state-wait">WAIT</span>
+        <span class="state-arrow">→</span>
+        <span class="state-pill state-hold">HOLD</span>
+        <span class="state-arrow">→</span>
+        <span class="state-pill state-done">DONE</span>
+        <span class="state-arrow">/</span>
+        <span class="state-pill state-kill">KILL</span>
+      </div>
+
+      <p>
+        The second sequence handles checkbox-like states for lists embedded inside
+        headings: <span class="state-pill state-todo" style="font-size:0.72rem">[ ]</span> <span class="state-arrow">→</span>
+        <span class="state-pill state-strt" style="font-size:0.72rem">[-]</span> <span class="state-arrow">→</span>
+        <span class="state-pill state-done" style="font-size:0.72rem">[X]</span>.
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">State Cycling Keybindings (in an org buffer)</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">t</span></span></td>
+              <td class="desc">
+                Open keyword selection menu (cycle or choose from a list)
+                <span class="note">Doom shows a popup picker when you have many keyword states.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key shift">S-</span><span class="key">→</span></span></td>
+              <td class="desc">Advance state forward (TODO → PROJ → STRT → …)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key shift">S-</span><span class="key">←</span></span></td>
+              <td class="desc">Retreat state backward</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">C-t</span></span></td>
+              <td class="desc">
+                Vanilla Emacs state-change (works regardless of evil mode)
+                <span class="note">Prompts for a single-letter shortcut from the keyword sequence.</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>State meanings at a glance</h3>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">State Reference</div>
+        <table>
+          <thead>
+            <tr><th>State</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="state-pill state-todo">TODO</span></td>
+              <td class="desc">An actionable item not yet started. The standard starting state.</td>
+            </tr>
+            <tr>
+              <td><span class="state-pill state-proj">PROJ</span></td>
+              <td class="desc">A container / project heading with child TODO items beneath it.</td>
+            </tr>
+            <tr>
+              <td><span class="state-pill state-strt">STRT</span></td>
+              <td class="desc">Work In Progress — this is what you're actively doing right now.</td>
+            </tr>
+            <tr>
+              <td><span class="state-pill state-wait">WAIT</span></td>
+              <td class="desc">Blocked on someone else; you can't proceed without external input.</td>
+            </tr>
+            <tr>
+              <td><span class="state-pill state-hold">HOLD</span></td>
+              <td class="desc">Deliberately paused — your decision, not an external blocker.</td>
+            </tr>
+            <tr>
+              <td><span class="state-pill state-done">DONE</span></td>
+              <td class="desc">Completed. Org records a <code>CLOSED:</code> timestamp automatically.</td>
+            </tr>
+            <tr>
+              <td><span class="state-pill state-kill">KILL</span></td>
+              <td class="desc">Cancelled, dropped, or no longer relevant. Not the same as DONE.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-icon">ℹ</div>
+        <div class="callout-body">
+          <strong>Logging state changes</strong>
+          By default Doom logs a <code>CLOSED:</code> timestamp when a task moves to DONE.
+          You can enable richer logging (notes on state change, timestamps on every transition)
+          by adding <code>(setq org-log-done 'note)</code> to your <code>config.el</code>.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 06: Scheduling ────────────────────── -->
+    <section id="scheduling">
+      <div class="section-label">06 · Scheduling</div>
+      <h2>Scheduling &amp; Deadlines</h2>
+
+      <p>
+        The distinction between <strong>SCHEDULED</strong> and <strong>DEADLINE</strong> is
+        important in org-mode. A <em>scheduled</em> date is when you <em>plan to start</em> working
+        on the task; a <em>deadline</em> is when it <em>must be done</em>. Both appear in the Org
+        Agenda, but with different visual urgency as the date approaches.
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Date &amp; Time Keybindings (cursor on a TODO heading)</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">d</span><span class="key seq">s</span></span></td>
+              <td class="desc">
+                Set the <code>SCHEDULED</code> date
+                <span class="note">Opens Emacs calendar picker. Navigate: <code>S-←/→</code> moves by day, <code>&lt;/&gt;</code> moves by month.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">d</span><span class="key seq">d</span></span></td>
+              <td class="desc">
+                Set the <code>DEADLINE</code> date
+                <span class="note">Deadline warnings start appearing in the agenda N days before. Default is 14 days.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">d</span><span class="key seq">t</span></span></td>
+              <td class="desc">
+                Insert an active timestamp <code>&lt;YYYY-MM-DD&gt;</code>
+                <span class="note">Active timestamps appear in the agenda as events (not todos).</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">d</span><span class="key seq">T</span></span></td>
+              <td class="desc">
+                Insert an inactive timestamp <code>[YYYY-MM-DD]</code>
+                <span class="note">Inactive timestamps do NOT appear in the agenda — useful for notes.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">C-s</span></span></td>
+              <td class="desc">Vanilla binding: schedule the heading (same as above)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">C-d</span></span></td>
+              <td class="desc">Vanilla binding: set deadline on the heading</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Inside the date picker</h3>
+
+      <p>
+        When the calendar popup opens after pressing a scheduling keybinding, use these keys to
+        navigate to the desired date before pressing <span class="kbd"><span class="key ret">RET</span></span>:
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Calendar Picker Navigation</div>
+        <table>
+          <thead>
+            <tr><th>Key</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key shift">S-</span><span class="key">←</span> / <span class="key">→</span></span></td>
+              <td class="desc">Move backward / forward one day</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key shift">S-</span><span class="key">↑</span> / <span class="key">↓</span></span></td>
+              <td class="desc">Move backward / forward one week</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">&lt;</span> / <span class="key">&gt;</span></span></td>
+              <td class="desc">Move backward / forward one month</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">.</span></span></td>
+              <td class="desc">Jump to today</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ret">RET</span></span></td>
+              <td class="desc">Confirm the selected date</td>
+            </tr>
+            <tr>
+              <td>Type <code>+2d</code>, <code>+1w</code>, <code>+3m</code></td>
+              <td class="desc">Relative date input — "2 days from now", "1 week from now", etc.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>What it looks like in the file</h3>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="lang">todo.org — scheduled + deadline example</span>
+          <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        </div>
+        <pre><span class="t-kw">* TODO</span> [#A] Ship authentication module <span class="t-str">:work:backend:</span>
+  DEADLINE: <span class="t-lit">&lt;2026-06-30 Tue&gt;</span>  SCHEDULED: <span class="t-lit">&lt;2026-06-24 Wed&gt;</span>
+  <span class="t-comment">:PROPERTIES:</span>
+  <span class="t-var">:Effort:</span>   2h
+  <span class="t-comment">:END:</span>
+  Implement JWT refresh flow, write integration tests,
+  coordinate deploy window with DevOps.</pre>
+      </div>
+
+      <h3>Recurring tasks</h3>
+
+      <p>
+        For tasks that repeat — daily standups, weekly reviews — add a repeater interval to the
+        timestamp directly in the org file:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="lang">Repeater Syntax</span>
+          <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        </div>
+        <pre><span class="t-kw">* TODO</span> Daily standup
+  SCHEDULED: <span class="t-lit">&lt;2026-06-24 Wed 09:00 +1d&gt;</span>   <span class="t-comment">; repeat every day</span>
+
+<span class="t-kw">* TODO</span> Weekly team retrospective
+  SCHEDULED: <span class="t-lit">&lt;2026-06-27 Sat .+1w&gt;</span>    <span class="t-comment">; schedule 1w from when DONE</span>
+
+<span class="t-kw">* TODO</span> Monthly financial review
+  SCHEDULED: <span class="t-lit">&lt;2026-07-01 Wed ++1m&gt;</span>    <span class="t-comment">; catch-up repeater</span></pre>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-icon">ℹ</div>
+        <div class="callout-body">
+          <strong>Repeater types</strong>
+          <code>+1d</code> schedules exactly 1 day ahead of the original date each time.
+          <code>.+1w</code> schedules 1 week from the date you marked it DONE (best for
+          habit-style tasks). <code>++1m</code> advances until the next future occurrence (good
+          for catch-up if you miss cycles).
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 07: Priorities ────────────────────── -->
+    <section id="priorities">
+      <div class="section-label">07 · Priorities &amp; Tags</div>
+      <h2>Priorities &amp; Tags</h2>
+
+      <p>
+        Priorities let you rank TODO items. Doom uses three levels by default:
+        <span class="prio-a">[#A]</span> (urgent), <span class="prio-b">[#B]</span> (normal, the
+        implicit default), and <span class="prio-c">[#C]</span> (low). Tags help you filter and
+        group tasks in the agenda by context, project, or person.
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Priority Keybindings</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key shift">S-</span><span class="key">↑</span></span></td>
+              <td class="desc">Raise priority of the current heading (C → B → A)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key shift">S-</span><span class="key">↓</span></span></td>
+              <td class="desc">Lower priority (A → B → C)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key">,</span></span></td>
+              <td class="desc">Set priority interactively (prompts A, B, C, or SPC to clear)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">p</span></span></td>
+              <td class="desc">Set priority via Doom's local leader menu</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Tag Keybindings</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">q</span></span></td>
+              <td class="desc">
+                Add or edit tags on the current heading
+                <span class="note">Autocompletes from existing tags in your org files.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">C-q</span></span></td>
+              <td class="desc">Vanilla tag insertion / editing</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">C-c</span></span></td>
+              <td class="desc">
+                When cursor is on a heading line, opens tag editor
+                <span class="note">Same key as "execute block" — context-sensitive.</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Tags are colon-delimited and appear at the right margin of the heading:
+      </p>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="lang">Tag syntax examples</span>
+          <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        </div>
+        <pre><span class="t-kw">* TODO</span> [#A] Fix login page bug          <span class="t-str">:work:frontend:urgent:</span>
+<span class="t-kw">* TODO</span> Buy groceries                    <span class="t-str">:personal:errands:</span>
+<span class="t-kw">* TODO</span> [#C] Read "Thinking Fast &amp; Slow"  <span class="t-str">:reading:low_priority:</span></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">✦</div>
+        <div class="callout-body">
+          <strong>Context tags for GTD-style filtering</strong>
+          Many users adopt GTD "context" tags like <code>:@home:</code>, <code>:@office:</code>,
+          <code>:@phone:</code>. These become powerful filters in the Org Agenda — press
+          <span class="kbd"><span class="key">m</span></span> inside the agenda to filter by tag.
+        </div>
+      </div>
+
+      <h3>Effort estimates</h3>
+
+      <p>
+        Set how long a task should take using the <code>Effort</code> property. This feeds into the
+        agenda column view and clocktable reports:
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Effort Property</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">o</span></span></td>
+              <td class="desc">Set a property on the current heading (choose <code>Effort</code> from the picker)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">C-x</span> <span class="key seq">e</span></span></td>
+              <td class="desc">Set effort estimate directly (vanilla keybind)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Section 08: Agenda ────────────────────────── -->
+    <section id="agenda">
+      <div class="section-label">08 · Agenda</div>
+      <h2>The Org Agenda</h2>
+
+      <p>
+        The Org Agenda is your <em>daily command center</em>. It aggregates all scheduled tasks,
+        deadlines, and active TODOs from your org files into a unified calendar-plus-list view.
+        This is where you review what needs doing today and take action on items.
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Opening the Agenda</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">o</span><span class="key seq">a</span></span></td>
+              <td class="desc">
+                Open the Org Agenda dispatcher menu
+                <span class="note">Presents a menu of agenda views to choose from.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">o</span><span class="key seq">a</span></span> then <span class="kbd"><span class="key seq">a</span></span></td>
+              <td class="desc">
+                <strong>Daily / weekly agenda</strong> — your primary view
+                <span class="note">Shows today's scheduled items and upcoming deadlines.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">o</span><span class="key seq">a</span></span> then <span class="kbd"><span class="key seq">t</span></span></td>
+              <td class="desc">
+                <strong>Global TODO list</strong> — all TODO-state items across all org files
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">o</span><span class="key seq">a</span></span> then <span class="kbd"><span class="key seq">m</span></span></td>
+              <td class="desc">
+                <strong>Tag / property match</strong> — filter by tag expression
+                <span class="note">E.g. type <code>+work-done</code> for work items not yet done.</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Navigating inside the Agenda buffer</h3>
+
+      <p>
+        Once the agenda is open, a rich set of single-key commands becomes available. You do
+        <em>not</em> need a leader prefix — just press the key directly in normal mode:
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Agenda Buffer Navigation &amp; Actions</div>
+        <table>
+          <thead>
+            <tr><th>Key</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key seq">j</span> / <span class="key seq">k</span></span></td>
+              <td class="desc">Move cursor down / up through agenda items (evil-style)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">n</span> / <span class="key">p</span></span></td>
+              <td class="desc">Next / previous day (or week, depending on the current view span)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ret">RET</span></span></td>
+              <td class="desc">Jump to the org file and heading for the item under the cursor</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">o</span></span></td>
+              <td class="desc">Open the entry in another window without leaving the agenda</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">t</span></span></td>
+              <td class="desc">
+                Cycle TODO state of the item under cursor <em>directly from the agenda</em>
+                <span class="note">Mark something DONE without leaving the agenda view.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">s</span></span></td>
+              <td class="desc">Schedule the item under cursor</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">d</span></span></td>
+              <td class="desc">Set / change deadline for item under cursor</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">+</span> / <span class="key">-</span></span></td>
+              <td class="desc">Raise / lower priority of the item under cursor</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">m</span></span></td>
+              <td class="desc">
+                Filter by tag
+                <span class="note">Type a tag name (e.g. <code>work</code>) and press RET to narrow the view.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">/</span></span></td>
+              <td class="desc">Filter by regex (narrows agenda to matching headlines)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">|</span></span></td>
+              <td class="desc">Remove all active filters and show full agenda again</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">r</span></span> or <span class="kbd"><span class="key">g</span></span></td>
+              <td class="desc">Refresh / rebuild the agenda view</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">v</span><span class="key seq">d</span></span></td>
+              <td class="desc">Switch to day view (show only today)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">v</span><span class="key seq">w</span></span></td>
+              <td class="desc">Switch to week view</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">v</span><span class="key seq">m</span></span></td>
+              <td class="desc">Switch to month view</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key">q</span></span></td>
+              <td class="desc">Close / quit the agenda buffer</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-icon">⚠</div>
+        <div class="callout-body">
+          <strong>Keep org-agenda-files in sync</strong>
+          If you create new <code>.org</code> files outside <code>org-directory</code>, they won't
+          appear in the agenda automatically. Add them to the list in your <code>config.el</code>
+          or use <code>M-x org-agenda-file-to-front</code> while visiting the file.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 09: Clocking ──────────────────────── -->
+    <section id="clocking">
+      <div class="section-label">09 · Clocking</div>
+      <h2>Clocking Time on Tasks</h2>
+
+      <p>
+        Org-mode's built-in time clock lets you track exactly how long you spend on each task.
+        This builds an accurate picture of your daily output and helps you calibrate future
+        effort estimates. The clock writes a <code>LOGBOOK</code> drawer into the heading
+        automatically.
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Clock Keybindings (cursor on a TODO heading)</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">i</span></span></td>
+              <td class="desc">
+                <strong>Clock in</strong> — start the timer on this task
+                <span class="note">Displays running clock in the mode line: <code>[1:23]</code></span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">o</span></span></td>
+              <td class="desc">
+                <strong>Clock out</strong> — stop the current timer
+                <span class="note">Writes the CLOCK interval to the LOGBOOK drawer.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">x</span></span></td>
+              <td class="desc">Cancel the running clock (discards the time)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">r</span></span></td>
+              <td class="desc">
+                Insert a <strong>clocktable</strong> report at the cursor
+                <span class="note">Generates a summary table of all clocked time in the current file or subtree.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">j</span></span></td>
+              <td class="desc">Jump to the currently clocked-in task (from anywhere in Emacs)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">e</span></span></td>
+              <td class="desc">Set effort estimate for the current task</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>What the LOGBOOK looks like</h3>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="lang">todo.org — clocked task</span>
+          <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        </div>
+        <pre><span class="t-kw">* DONE</span> [#B] Implement rate limiting middleware  <span class="t-str">:work:backend:</span>
+  CLOSED: [2026-06-23 Tue 16:45]
+  <span class="t-comment">:LOGBOOK:</span>
+  CLOCK: [2026-06-23 Tue 14:00]--[2026-06-23 Tue 16:45] =&gt;  2:45
+  CLOCK: [2026-06-23 Tue 09:30]--[2026-06-23 Tue 11:00] =&gt;  1:30
+  <span class="t-comment">:END:</span>
+  <span class="t-comment">:PROPERTIES:</span>
+  <span class="t-var">:Effort:</span>   3h
+  <span class="t-comment">:END:</span></pre>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-icon">✦</div>
+        <div class="callout-body">
+          <strong>Clock persistence across sessions</strong>
+          Add <code>(org-clock-persistence-insinuate)</code> and
+          <code>(setq org-clock-persist t)</code> to your <code>config.el</code> so Emacs
+          remembers the running clock between sessions. If you close Emacs mid-task, it will
+          ask whether to resume or resolve the open clock on next start.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 10: Refiling ──────────────────────── -->
+    <section id="refiling">
+      <div class="section-label">10 · Refiling</div>
+      <h2>Refiling Tasks</h2>
+
+      <p>
+        <strong>Refiling</strong> moves a heading from one place to another — for instance, moving
+        a quickly captured item from your inbox into the appropriate project file. Doom maps this
+        to a convenient two-key sequence under the local leader.
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">Refile Keybindings</div>
+        <table>
+          <thead>
+            <tr><th>Keybinding</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">r</span><span class="key seq">r</span></span></td>
+              <td class="desc">
+                Refile the current heading (opens a fuzzy search of all headings in agenda files)
+                <span class="note">Navigate the picker with <code>C-n/C-p</code> or type to filter.</span>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">C-w</span></span></td>
+              <td class="desc">Vanilla refile command (same underlying action)</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">r</span><span class="key seq">R</span></span></td>
+              <td class="desc">Refile subtree — moves the entire subtree including all children</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <div class="callout-icon">ℹ</div>
+        <div class="callout-body">
+          <strong>GTD Inbox workflow</strong>
+          A popular pattern is to keep a dedicated <code>inbox.org</code> as your fast-capture
+          destination, then once a day refile everything from the inbox into your proper project
+          files. Set <code>(setq +org-capture-todo-file "inbox.org")</code> in your config to
+          route <span class="kbd"><span class="key spc">SPC</span><span class="key">X</span><span class="key seq">t</span></span> there.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 11: Workflow ──────────────────────── -->
+    <section id="workflow">
+      <div class="section-label">11 · Workflow</div>
+      <h2>The Daily Workflow</h2>
+
+      <p>
+        The following morning-to-evening routine distils Doom's org capabilities into a
+        repeatable daily ritual. Each step uses only the default keybindings covered in this guide.
+      </p>
+
+      <div class="workflow">
+        <div class="workflow-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Morning Review — Open Today's Agenda</h4>
+            <p>
+              Press <span class="kbd"><span class="key spc">SPC</span><span class="key seq">o</span><span class="key seq">a</span><span class="key seq">a</span></span>
+              to open the day agenda. Scan overdue items and deadlines approaching.
+              Use <span class="kbd"><span class="key">v</span><span class="key seq">d</span></span> to switch to a pure day-view if you want to focus only on today.
+            </p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Brain Dump — Capture New Tasks Immediately</h4>
+            <p>
+              As ideas and tasks arrive throughout the day, press
+              <span class="kbd"><span class="key spc">SPC</span><span class="key">X</span><span class="key seq">t</span></span>
+              to capture them instantly. Don't organize yet — just get them out of your head and into
+              <code>todo.org</code>. This is your inbox. Return to your previous context in seconds.
+            </p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Process — Refile and Schedule Captured Items</h4>
+            <p>
+              Visit <code>todo.org</code> or the agenda and process newly captured items.
+              For each: set a state (<span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">t</span></span>),
+              assign a deadline or schedule (<span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">d</span><span class="key seq">s</span></span> / <span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">d</span><span class="key seq">d</span></span>),
+              tag it (<span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">q</span></span>),
+              and refile it (<span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">r</span><span class="key seq">r</span></span>).
+            </p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Execute — Clock In and Work</h4>
+            <p>
+              Pick your highest-priority task from the agenda. Navigate to it with
+              <span class="kbd"><span class="key ret">RET</span></span>, then clock in with
+              <span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">i</span></span>.
+              Change its state to <span class="state-pill state-strt" style="font-size:0.72rem">STRT</span>
+              while working on it.
+            </p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>Finish — Clock Out and Mark Done</h4>
+            <p>
+              When the task is complete, clock out
+              (<span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">o</span></span>)
+              and advance the state to <span class="state-pill state-done" style="font-size:0.72rem">DONE</span>
+              by pressing <span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">t</span></span>
+              (or directly in the agenda with <span class="kbd"><span class="key">t</span></span>).
+              Doom records the <code>CLOSED</code> timestamp automatically.
+            </p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-num">6</div>
+          <div class="step-content">
+            <h4>Evening Review — Journal Entry</h4>
+            <p>
+              Press <span class="kbd"><span class="key spc">SPC</span><span class="key">X</span><span class="key seq">j</span></span>
+              to open a journal capture. Reflect on what you accomplished, what was blocked, and
+              what carries over. This creates a date-tree entry in <code>journal.org</code>
+              you can review any time.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 12: Cheat-Sheet ───────────────────── -->
+    <section id="cheatsheet">
+      <div class="section-label">12 · Reference</div>
+      <h2>Quick Cheat-Sheet</h2>
+
+      <p>
+        A consolidated reference of every keybinding covered in this guide, organized by phase.
+      </p>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">📥 Capture</div>
+        <table>
+          <thead><tr><th>Keybinding</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key">X</span></span></td><td class="desc">Open capture dispatcher</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key">X</span> <span class="key seq">t</span></span></td><td class="desc">Capture personal TODO</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key">X</span> <span class="key seq">n</span></span></td><td class="desc">Capture personal note</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key">X</span> <span class="key seq">j</span></span></td><td class="desc">Capture journal entry</td></tr>
+            <tr><td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">C-c</span></span></td><td class="desc">Confirm &amp; file capture</td></tr>
+            <tr><td><span class="kbd"><span class="key ctrl">C-c</span> <span class="key ctrl">k</span></span></td><td class="desc">Abort capture</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">✏️ Editing in org buffers</div>
+        <table>
+          <thead><tr><th>Keybinding</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><span class="kbd"><span class="key ctrl">C-</span><span class="key ret">RET</span></span></td><td class="desc">New heading (same level)</td></tr>
+            <tr><td><span class="kbd"><span class="key ctrl">C-</span><span class="key shift">S-</span><span class="key ret">RET</span></span></td><td class="desc">New TODO heading</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">t</span></span></td><td class="desc">Cycle / set TODO state</td></tr>
+            <tr><td><span class="kbd"><span class="key shift">S-</span><span class="key">→</span> / <span class="key">←</span></span></td><td class="desc">Advance / retreat state</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">d</span><span class="key seq">s</span></span></td><td class="desc">Schedule task</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">d</span><span class="key seq">d</span></span></td><td class="desc">Set deadline</td></tr>
+            <tr><td><span class="kbd"><span class="key shift">S-</span><span class="key">↑</span> / <span class="key">↓</span></span></td><td class="desc">Raise / lower priority</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">q</span></span></td><td class="desc">Add / edit tags</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">x</span></span></td><td class="desc">Toggle checkbox</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">r</span><span class="key seq">r</span></span></td><td class="desc">Refile heading</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">o</span></span></td><td class="desc">Set property (Effort, etc.)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">📅 Agenda</div>
+        <table>
+          <thead><tr><th>Keybinding</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">o</span><span class="key seq">a</span><span class="key seq">a</span></span></td><td class="desc">Open daily agenda</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">o</span><span class="key seq">a</span><span class="key seq">t</span></span></td><td class="desc">Global TODO list</td></tr>
+            <tr><td><span class="kbd"><span class="key">t</span></span> (in agenda)</td><td class="desc">Cycle TODO state</td></tr>
+            <tr><td><span class="kbd"><span class="key">s</span></span> (in agenda)</td><td class="desc">Schedule item</td></tr>
+            <tr><td><span class="kbd"><span class="key">d</span></span> (in agenda)</td><td class="desc">Set deadline</td></tr>
+            <tr><td><span class="kbd"><span class="key">m</span></span> (in agenda)</td><td class="desc">Filter by tag</td></tr>
+            <tr><td><span class="kbd"><span class="key">|</span></span> (in agenda)</td><td class="desc">Remove all filters</td></tr>
+            <tr><td><span class="kbd"><span class="key">r</span></span> (in agenda)</td><td class="desc">Refresh agenda</td></tr>
+            <tr><td><span class="kbd"><span class="key">q</span></span> (in agenda)</td><td class="desc">Quit agenda</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">⏱ Clocking</div>
+        <table>
+          <thead><tr><th>Keybinding</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">i</span></span></td><td class="desc">Clock in</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">o</span></span></td><td class="desc">Clock out</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">x</span></span></td><td class="desc">Cancel clock</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">j</span></span></td><td class="desc">Jump to clocked task</td></tr>
+            <tr><td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">m</span><span class="key seq">c</span><span class="key seq">r</span></span></td><td class="desc">Insert clocktable report</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="kb-table-wrap">
+        <div class="table-title">🔍 Discovery (when in doubt)</div>
+        <table>
+          <thead><tr><th>Keybinding</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">h</span><span class="key seq">k</span></span></td>
+              <td class="desc">Describe a keybinding — type a key sequence to see what command it runs</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">h</span><span class="key seq">b</span><span class="key seq">b</span></span></td>
+              <td class="desc">Search all keybindings available in the current buffer context</td>
+            </tr>
+            <tr>
+              <td><span class="kbd"><span class="key spc">SPC</span><span class="key seq">h</span><span class="key seq">r</span><span class="key seq">r</span></span></td>
+              <td class="desc">Reload Doom config (after editing <code>config.el</code>)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <footer>
+      <p>
+        This guide targets Doom Emacs v21.12+ with evil mode enabled (the default).
+        Content current as of <strong>June 2026</strong>.
+        Source truth: <code>SPC h k</code> and <code>SPC h b b</code> inside your own Emacs instance.
+      </p>
+    </footer>
+
+  </main>
+</div>
+
+</body>
+</html>
