@@ -212,7 +212,7 @@
         which-key-separator " → "
         which-key-max-display-columns nil
         which-key-popup-type 'side-window
-        which-key-side-window-max-width 0.33))
+        which-key-side-window-max-width 0.25))
 #+end_src
 
 ** Parenthesis
@@ -224,6 +224,8 @@
 ;;; This causes false mismatch errors in code like (> 2 4) inside
 ;;; org source blocks. This fix changes them to regular punctuation,
 ;;; but only outside strings and comments, and only inside src blocks.
+(after! org
+  (remove-hook 'org-mode-hook #'doom-disable-show-paren-mode-h))
 
 ;;;###autoload
 (defun my/org-src-bracket-syntax-fix (start end)
@@ -273,14 +275,14 @@ and comments, and only inside src blocks."
 ;;    Per Doom's FAQ, this is the correct way to disable smartparens.
 ;;    We cannot use (package! smartparens :disable t) because it's
 ;;    a core package and will break Doom's base config.
-(remove-hook 'doom-first-buffer-hook #'smartparens-global-mode)
+;; (remove-hook 'doom-first-buffer-hook #'smartparens-global-mode)
 
 ;; 2. Remove Doom's hook that disables smartparens navigation.
 ;;    This hook is added when +smartparens flag is enabled in init.el.
 ;;    It's harmless when smartparens is off, but we remove it for cleanliness.
-(after! smartparens
-  (remove-hook! 'after-change-major-mode-hook
-    #'doom-disable-smartparens-navigate-skip-match-h))
+;; (after! smartparens
+;;   (remove-hook! 'after-change-major-mode-hook
+;;     #'doom-disable-smartparens-navigate-skip-match-h))
 
 ;; 3. Enable electric-pair-mode globally.
 ;;    This is Emacs' built-in delimiter pairing system.
@@ -290,36 +292,36 @@ and comments, and only inside src blocks."
 ;;      - Skip-over closing delimiters (type ) when already at ) to move past)
 ;;      - Balance preservation (won't create unbalanced delimiters)
 ;;      - Adjacent pair deletion (backspace between () deletes both)
-(electric-pair-mode 1)
+;; (electric-pair-mode 1)
 
-;; 4. Configure electric-pair-mode settings.
-(setq-default
- ;; Skip whitespace when deciding whether to skip over closing delimiter
- electric-pair-skip-whitespace t
- ;; Open an extra newline when pressing RET between adjacent pairs
- electric-pair-open-newline-between-pairs t
- ;; Delete adjacent pairs when backspacing between them
- electric-pair-delete-adjacent-pairs t)
+;; ;; 4. Configure electric-pair-mode settings.
+;; (setq-default
+;;  ;; Skip whitespace when deciding whether to skip over closing delimiter
+;;  electric-pair-skip-whitespace t
+;;  ;; Open an extra newline when pressing RET between adjacent pairs
+;;  electric-pair-open-newline-between-pairs t
+;;  ;; Delete adjacent pairs when backspacing between them
+;;  electric-pair-delete-adjacent-pairs t)
 
 ;; 5. In org-mode, inhibit < pairing to not interfere with org-tempo.
 ;;    This allows org-tempo templates like <s to work without electric-pair
 ;;    inserting a matching >.
-(after! org
-  (add-hook! 'org-mode-hook
-    (defun my/org-disable-angle-bracket-pairing-h ()
-      "Inhibit < pairing in org-mode for org-tempo compatibility."
-      (setq-local electric-pair-inhibit-predicate
-                  (lambda (c)
-                    (or (funcall (default-value 'electric-pair-inhibit-predicate) c)
-                        (char-equal c ?<)))))))
+;; (after! org
+;;   (add-hook! 'org-mode-hook
+;;     (defun my/org-disable-angle-bracket-pairing-h ()
+;;       "Inhibit < pairing in org-mode for org-tempo compatibility."
+;;       (setq-local electric-pair-inhibit-predicate
+;;                   (lambda (c)
+;;                     (or (funcall (default-value 'electric-pair-inhibit-predicate) c)
+;;                         (char-equal c ?<)))))))
 
 ;; 6. Enable echo area display for offscreen matching brackets.
 ;;    Doom already enables show-paren-mode for bracket highlighting.
 ;;    This variable (added in Emacs 29.1) shows the matching bracket's
 ;;    line in the echo area when the matching bracket is offscreen.
 ;;    Options: nil (off), t (echo area), 'overlay, 'child-frame
-(when (boundp 'show-paren-context-when-offscreen)
-  (setq show-paren-context-when-offscreen t))
+;;(when (boundp 'show-paren-context-when-offscreen)
+(setq show-paren-context-when-offscreen t)
 #+end_src
 
 ** Indent-Bars
@@ -471,7 +473,7 @@ and comments, and only inside src blocks."
 ** Term
 #+begin_src emacs-lisp
 (after! multi-term
-  (setq multi-term-dedicated-window-height 20))
+  (setq multi-term-dedicated-window-height 8))
 #+end_src
 
 * Org
@@ -493,8 +495,8 @@ and comments, and only inside src blocks."
         org-src-fontify-natively t
         org-src-preserve-indentation t
         org-src-tab-acts-natively t
-        org-hide-emphasis-markers nil
-        org-hide-leading-stars nil
+        ;; org-hide-emphasis-markers nil
+        ;; org-hide-leading-stars nil
         ;; org-fontify-quote-and-verse-blocks nil
         ;; org-fontify-whole-heading-line nil
         ;; org-fontify-done-headline nil
@@ -672,7 +674,6 @@ and comments, and only inside src blocks."
       ("q" "Quit" transient-quit-one)
       ("<" "insert <" self-insert-command)]])
 
-  ;; Bind '<' to trigger the menu contextually
   (define-key org-mode-map (kbd "<")
               (lambda ()
                 (interactive)
@@ -684,7 +685,7 @@ and comments, and only inside src blocks."
 ** Org Tab in Src Blocks
 #+begin_src emacs-lisp
 (with-eval-after-load 'evil-org
-  (remove-hook 'org-tab-first-hook #'+org-cycle-only-current-subtree-h))
+  (remove-hook 'org-cycle-tab-first-hook #'+org-cycle-only-current-subtree-h))
 #+end_src
 
 * Development Tools
