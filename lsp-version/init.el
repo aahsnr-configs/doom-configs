@@ -88,7 +88,7 @@
        ;;collab            ; buffers with friends
        debugger          ; FIXME stepping through code, to help you add bugs
        direnv
-       ;;editorconfig      ; let someone else argue about tabs vs spaces
+       ;;editorconfig
        ein               ; tame Jupyter notebooks with emacs
        (eval +overlay)     ; run code, run (also, repls)
        lookup              ; navigate your code and its documentation
@@ -104,7 +104,7 @@
        ;;upload            ; map local to remote projects via ssh/ftp
 
        :os
-       (tty +osc)
+       ;;(tty +osc)
 
        :lang
        ;;ada               ; In strong typing we (blindly) trust
