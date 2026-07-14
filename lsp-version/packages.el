@@ -57,8 +57,6 @@
 (package! rainbow-mode)
 (package! persist-text-scale)
 (package! org-super-agenda)
-(package! flycheck-plantuml :disable t)
-(package! flymake-popon :disable t)
 ;;(package! smartparens :disable t)
 (package! symbols-outline)
 (package! jinx)
@@ -68,4 +66,4 @@
 (package! dired-open)
 (package! org-fragtog)
 (package! magit-todos)
-(package! flymake-ruff)
+

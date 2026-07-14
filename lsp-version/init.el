@@ -27,10 +27,10 @@
        :ui
        doom
        dashboard
-       (emoji +unicode)
+       ;;(emoji +unicode)
        hl-todo
        indent-guides
-       ligatures
+       ;;ligatures
        ;;minimap            ; show a map of the code on the side
        modeline             ; snazzy, Atom-inspired modeline, plus API
        ;;nav-flash          ; blink cursor line after big motions
@@ -38,14 +38,16 @@
        (popup +all +defaults)
        (smooth-scroll +interpolate)
        ;;tabs
-       treemacs
+       (treemacs +lsp)
        ;;neotree
        ;;unicode
        (vc-gutter +pretty) ; vcs diff in the fringe
        ;;vi-tilde-fringe   ; fringe tildes to mark beyond EOB
        ;;window-select     ; visually switch windows
+
+
        workspaces
-       zen               ; distraction-free coding or writing
+       ;;zen               ; distraction-free coding or writing
 
        :editor
        (evil +everywhere)
@@ -72,6 +74,7 @@
        vc                  ; version-control and Emacs, sitting in a tree
 
        :term
+       ghostel
        ;;eshell              ; the elisp shell that works everywhere
        ;;shell             ; simple shell REPL for Emacs
        term              ; basic terminal emulator for Emacs
@@ -151,11 +154,7 @@
        ;;ocaml             ; an objective camel
        (org                ; organize your plain life in plain text
         +dragndrop
-        +gnuplot
         +jupyter
-        +roam
-        +noter
-        +pandoc
         +pretty)
        ;;php               ; perl's insecure younger brother
        plantuml          ; diagrams for confusing people more
@@ -176,17 +175,17 @@
        ;;solidity          ; do you need a blockchain? No.
        ;;swift             ; who asked for emoji variables?
        ;;terra             ; Earth and Moon in alignment for performance.
-       (web +lsp +tree-sitter)               ; the tubes
-       (yaml +lsp +tree-sitter)
+       ;;(web +lsp +tree-sitter)               ; the tubes
+       ;;(yaml +lsp +tree-sitter)
        ;;zig               ; C, but simpler
 
        :email
-       (mu4e +org +gmail)
+       ;;(mu4e +org +gmail)
        ;;notmuch
        ;;(wanderlust +gmail)
 
        :app
-       calendar
+       ;;calendar
        ;;emms
        ;;everywhere        ; *leave* Emacs!? You must be joking
        ;;irc               ; how neckbeards socialize

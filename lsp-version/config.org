@@ -88,7 +88,6 @@
   :config
   (load-theme 'doom-tokyo-night t)
   (doom-themes-visual-bell-config)
-  (doom-themes-neotree-config)
   (doom-themes-treemacs-config)
   (doom-themes-org-config))
 #+end_src
@@ -138,33 +137,6 @@
 #+end_src
 
 * Editor Behaviour
-** Rainbow Delimiters
-#+begin_src emacs-lisp
-(use-package! rainbow-delimiters
-  :hook ((text-mode . rainbow-delimiters-mode)
-         (LaTeX-mode . rainbow-delimiters-mode)
-         (org-src-mode . rainbow-delimiters-mode)
-         (prog-mode . rainbow-delimiters-mode)))
-
-(custom-set-faces!
- '(rainbow-delimiters-depth-1-face :foreground "#89b4fa")
- '(rainbow-delimiters-depth-2-face :foreground "#cba6f7")
- '(rainbow-delimiters-depth-3-face :foreground "#f9e2af")
- '(rainbow-delimiters-depth-4-face :foreground "#89dceb")
- '(rainbow-delimiters-depth-5-face :foreground "#f38ba8")
- '(rainbow-delimiters-depth-6-face :foreground "#a6e3a1")
- '(rainbow-delimiters-depth-7-face :foreground "#fab387")
- '(rainbow-delimiters-depth-8-face :foreground "#cdd6f4")
- '(rainbow-delimiters-depth-9-face :foreground "#bac2de"))
-#+end_src
-
-** Rainbow Mode
-#+begin_src emacs-lisp
-(use-package! rainbow-mode
-  :hook ((prog-mode . rainbow-mode)
-         (org-mode . rainbow-mode)))
-#+end_src
-
 ** Which-key
 #+begin_src emacs-lisp
 (after! which-key
